@@ -72,7 +72,7 @@ st.markdown(
 
     /* Force text to be white so it is readable on black */
     h1, h2, h3, h4, h5, h6, p, li, span, div, label {
-        color: black !important;
+        color: white !important;
     }
     
     /* Fix input fields so they aren't transparent/unreadable */
