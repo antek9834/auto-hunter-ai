@@ -9,6 +9,7 @@ except RuntimeError:
 import streamlit as st
 import base64
 import os
+import uuid  # NEW: For generating session IDs
 from dotenv import load_dotenv
 import pypdf
 from services.car_search_system import CarSearchService
@@ -18,6 +19,9 @@ from utils.prompts import PromptLoader
 from utils.ai import call_gemini
 from services.offer_analysis_service import OfferAnalysisService
 from components.negotiation_ui import render_negotiation_analysis
+
+# --- 1. NEW IMPORTS FOR TRACING ---
+from langfuse.decorators import observe, langfuse_context
 
 # Load env vars and init tracing
 load_dotenv()
@@ -29,9 +33,21 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- 2. SETUP SESSION ID ---
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+# Configure Langfuse to group traces by this user session
+langfuse_context.update_current_trace(
+    session_id=st.session_state.session_id,
+    tags=["streamlit_app", "auto_hunter"]
+)
 
 # --- FUNCTION TO SET BACKGROUND IMAGE ---
 def set_background(image_file):
+    # (Check if file exists to prevent errors if missing)
+    if not os.path.exists(image_file):
+        return
     with open(image_file, "rb") as f:
         data = f.read()
     b64_encoded = base64.b64encode(data).decode()
@@ -47,35 +63,27 @@ def set_background(image_file):
     """
     st.markdown(style, unsafe_allow_html=True)
 
-    # --- CSS FOR "FLOATING CARD" UI ---
+# --- CSS FOR "FLOATING CARD" UI ---
 st.markdown(
     """
     <style>
     /* Target the main container */
     .block-container {
-        background-color: rgba(0, 0, 0, 0.75); /* 75% opacity black */
-        border-radius: 25px;                   /* Rounded corners */
-        padding: 40px !important;              /* Inner spacing */
-        
-        /* Create the gaps around the box */
-        max-width: 85% !important;             /* Leave 15% space on sides */
-        margin-top: 30px;                      /* Space from top */
-        margin-bottom: 50px;                   /* Space from bottom */
-        margin-left: auto;                     /* Center horizontally */
-        margin-right: auto;                    /* Center horizontally */
-        
-        /* Glassmorphism effect */
+        background-color: rgba(0, 0, 0, 0.75);
+        border-radius: 25px;
+        padding: 40px !important;
+        max-width: 85% !important;
+        margin-top: 30px;
+        margin-bottom: 50px;
+        margin-left: auto;
+        margin-right: auto;
         backdrop-filter: blur(8px);            
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-
-    /* Force text to be white so it is readable on black */
     h1, h2, h3, h4, h5, h6, p, li, span, div, label {
         color: white !important;
     }
-    
-    /* Fix input fields so they aren't transparent/unreadable */
     .stTextInput > div > div > input, 
     .stTextArea > div > div > textarea, 
     .stNumberInput > div > div > input {
@@ -104,12 +112,42 @@ if "offer_service" not in st.session_state:
     st.session_state.offer_service = OfferAnalysisService()
 
 header_path = os.path.join(current_folder, "black_header.png")
-
 try:
     st.image(header_path, use_column_width=True)
 except Exception:
-    # Fallback if image isn't found
     st.title("🚗 CarSearch AI")
+
+# --- 3. TRACED FUNCTIONS ---
+# We wrap the logic in functions decorated with @observe()
+
+@observe(name="fuel_cost_analysis")
+def run_fuel_analysis(km_month, consumption, fuel_price, person_weight, num_people):
+    service = FuelCostAnalysisService()
+    return service.analyze(
+        km_month,
+        consumption,
+        fuel_price,
+        avg_person_weight=person_weight if person_weight > 0 else None,
+        num_people=num_people if num_people > 0 else None
+    )
+
+@observe(name="car_search")
+def run_car_search(query, service):
+    filters = service.parse_query(query)
+    results = service.search_cars(filters)
+    return results
+
+@observe(name="offer_negotiation")
+def run_offer_analysis(service, description, price, mileage, year, recent_results):
+    return service.analyze(
+        description=description,
+        price=price,
+        mileage=mileage,
+        year=year,
+        recent_results=recent_results
+    )
+
+# --- UI LOGIC ---
 
 def fuel_cost_page():
     st.title("⛽ Fuel & Cost Analyzer")
@@ -120,14 +158,9 @@ def fuel_cost_page():
     num_people = st.number_input("Number of passengers (optional)", min_value=0)
 
     if st.button("Calculate Fuel Costs"):
-        service = FuelCostAnalysisService()
-        results = service.analyze(
-            km_month,
-            consumption,
-            fuel_price,
-            avg_person_weight=person_weight if person_weight > 0 else None,
-            num_people=num_people if num_people > 0 else None
-        )
+        # Call the TRACED function
+        results = run_fuel_analysis(km_month, consumption, fuel_price, person_weight, num_people)
+        
         st.subheader("Fuel Cost Results")
         st.json(results)
 
@@ -154,8 +187,7 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Error reading PDF: {e}")
 
-# ---------------------------------------
-# Tabs: Search and Chat
+# Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
     "🔍 Search Cars",
     "💬 Chat About Cars",
@@ -177,13 +209,11 @@ with tab1:
         help="You can specify Brand, Model, Fuel Type, Minimum Year, Max KM, and Price Range."
     )
 
-    # --- ACTION: FETCH DATA ---
     if st.button("Search", type="primary"):
         if not user_query.strip():
             st.warning("Please enter a query.")
         else:
             with st.spinner("Searching Market... (Check the opened browser window!)"):
-                # Lazy Initialization
                 if st.session_state.car_service is None:
                     try:
                         st.session_state.car_service = CarSearchService()
@@ -191,22 +221,18 @@ with tab1:
                         st.error(f"Failed to initialize service: {e}")
                         st.stop()
 
-                # 1. Parse Query
-                filters = st.session_state.car_service.parse_query(user_query)
-                
-                # 2. Scrape Data
-                raw_results = st.session_state.car_service.search_cars(filters)
+                # Call the TRACED function
+                raw_results = run_car_search(user_query, st.session_state.car_service)
 
                 if raw_results:
-                    # 3. AI Rank & Annotate
                     with st.spinner("🤖 AI is analyzing and ranking deals..."):
                         try:
+                            # Ensure rank_and_annotate is also decorated in your Service class for full tracing
                             processed_results = st.session_state.car_service.rank_and_annotate(user_query, raw_results)
                             st.session_state.current_results = processed_results
                         except AttributeError:
                             st.session_state.current_results = raw_results
                     
-                    # 4. Generate Market Summary
                     with st.spinner("Generating final market report..."):
                         try:
                             summary = st.session_state.car_service.summarize_results(
@@ -220,15 +246,12 @@ with tab1:
                     st.session_state.current_results = []
                     st.warning("No cars found matching your query. Check the terminal for details.")
 
-    # --- DISPLAY: RENDER DATA (Outside button block so it persists) ---
     if st.session_state.current_results:
         results = st.session_state.current_results
         st.divider()
-        # Friendly Intro
         st.markdown("### 🎯 Best Matches (Ranked by AI)")
         st.success(f"Found {len(results)} listings based on your criteria.")
 
-        # Show Listings
         for car in results:
             with st.container(border=True):
                 col1, col2 = st.columns([1, 3])
@@ -239,7 +262,6 @@ with tab1:
                         st.caption("No Image Available")
                 with col2:
                     st.subheader(car.get('title', 'No Title'))
-                    # AI Description
                     if car.get('ai_description'):
                         st.info(f"🤖 **AI says:** {car['ai_description']}")
                     
@@ -249,11 +271,9 @@ with tab1:
                         f"**KM:** {car.get('km', 0):,} km | "
                         f"**Fuel:** {car.get('fuel', 'N/A')}"
                     )
-                    
                     if car.get('link'):
                         st.markdown(f"[👉 View Full Listing]({car['link']})")
 
-        # Market Summary at the bottom
         if st.session_state.search_summary:
             st.divider()
             st.info(f"**📊 Market Overview:**\n\n{st.session_state.search_summary}")
@@ -280,6 +300,7 @@ with tab2:
         if q:
             st.session_state.chat_history.append({'role': 'user', 'content': q})
             with st.spinner("Analyzing..."):
+                # Ensure chat_about_results is decorated in the Service class
                 ans = st.session_state.car_service.chat_about_results(
                     q,
                     st.session_state.current_results,
@@ -294,7 +315,6 @@ with tab2:
 
 # --- TAB 4: Offer Negotiation Helper ---
 with tab4:
-    # ensure service exists
     if "offer_service" not in st.session_state:
         st.session_state.offer_service = OfferAnalysisService()
 
@@ -307,19 +327,12 @@ with tab4:
         "- Write a message to negotiate in Portuguese\n"
     )
 
-    # ---- User Inputs ----
     col1, col2 = st.columns(2)
     with col1:
-        price = st.number_input(
-            "Price (€)", min_value=0.0, max_value=100000.0, step=100.0
-        )
+        price = st.number_input("Price (€)", min_value=0.0, max_value=100000.0, step=100.0)
     with col2:
-        mileage = st.slider(
-            "Mileage (km)", min_value=0, max_value=1_000_000, step=1000, value=150000
-        )
-        year = st.slider(
-            "Production Year", min_value=1900, max_value=2025, value=2015
-        )
+        mileage = st.slider("Mileage (km)", min_value=0, max_value=1_000_000, step=1000, value=150000)
+        year = st.slider("Production Year", min_value=1900, max_value=2025, value=2015)
 
     car_description = st.text_area(
         "Paste the full description from the listing:",
@@ -327,41 +340,39 @@ with tab4:
         placeholder="Example: Honda Civic 1.4i S, 2001, 107,000 km..."
     )
 
-    # ---- RUN ANALYSIS ----
     if st.button("Analyze Offer", type="primary"):
         if not car_description.strip():
             st.warning("Please paste the listing description.")
             st.stop()
 
         with st.spinner("Analyzing the offer using AI..."):
-            analysis = st.session_state.offer_service.analyze(
-                description=car_description,
-                price=price,
-                mileage=mileage,
-                year=year,
-                recent_results=st.session_state.get("current_results", [])
+            # Call the TRACED function
+            analysis = run_offer_analysis(
+                st.session_state.offer_service,
+                car_description,
+                price,
+                mileage,
+                year,
+                st.session_state.get("current_results", [])
             )
 
         st.subheader("📊 Negotiation Analysis")
         
-        # Safety check – prevents undefined variable errors
         if not analysis:
             st.error("AI returned no analysis. Please try again.")
             st.stop()
 
-        # Scam color logic
         risk = analysis.get("scam_risk_score", 50)
         if risk < 30:
-            color = "#2ecc71"  # green
+            color = "#2ecc71"
             label = "Low Scam Risk"
         elif risk < 70:
-            color = "#f1c40f"  # yellow
+            color = "#f1c40f"
             label = "Medium Scam Risk"
         else:
-            color = "#e74c3c"  # red
+            color = "#e74c3c"
             label = "High Scam Risk"
 
-        # --- DISPLAY RESULTS ---
         st.markdown(
             f"""
             <div style='padding: 12px; border-radius: 8px; background-color:{color}; color:white;'>
@@ -392,7 +403,3 @@ with tab4:
 
         st.write("### 📩 Negotiation Message (PT)")
         st.code(analysis.get("buyer_message", "No message generated."), language="markdown")
-
-# Footer
-st.divider()
-st.caption("Built with ❤️ using Streamlit | CarSearch AI")

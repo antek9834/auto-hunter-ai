@@ -3,17 +3,24 @@ import os
 import backoff
 import requests
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
-# --- SAFE IMPORT FOR LANGFUSE ---
+# --- LANGFUSE TRACING SETUP ---
 try:
-    from langfuse.decorators import observe
+    from langfuse.decorators import observe, langfuse_context
+    print("[System] Langfuse library found. Tracing enabled.")
 except ImportError:
+    print("[System] Langfuse library NOT found. Tracing disabled.")
     def observe(*args, **kwargs):
         def decorator(func):
             return func
         return decorator
-# --------------------------------
+    
+    class DummyContext:
+        def update_current_observation(self, **kwargs): pass
+        
+    langfuse_context = DummyContext()
+# ------------------------------
 
 from tools.standvirtual_scraper import StandvirtualScraper
 
@@ -34,17 +41,11 @@ class CarSearchService:
         else:
             print(f"[Service Init] LLM API key loaded.")
         
-        # --- LOAD PROMPT FROM FILE (WITH FALLBACK) ---
         self.parse_system_prompt = self._load_prompt("car_query.txt")
-        
-        # Fallback if file load failed
         if not self.parse_system_prompt:
-            print("[Service Init] Prompt file empty or missing. Using hardcoded fallback.")
             self.parse_system_prompt = (
-                "You are a helpful assistant that extracts structured search parameters from a user's car search query. "
-                "The search will be conducted on Standvirtual. Output MUST be valid JSON. "
-                "Extract fields: brand, model, min_price, max_price, min_year, max_km, fuel, location. "
-                "Rules: If missing, use null. Convert 'k' to thousands."
+                "You are a helpful assistant that extracts structured search parameters. "
+                "Extract fields: brand, model, min_price, max_price, min_year, max_km, fuel, location."
             )
 
         self.parse_schema = {
@@ -62,36 +63,22 @@ class CarSearchService:
         }
 
     def _load_prompt(self, filename: str) -> str:
-        """
-        Robustly resolves the path to the prompts folder and loads the file.
-        """
         try:
-            # 1. Resolve path relative to this file (services/car_search_system.py)
             current_dir = Path(__file__).parent.resolve()
-            # Go up one level to project root, then into prompts
             project_root = current_dir.parent
             file_path = project_root / "prompts" / filename
-            
-            print(f"[Service Init] Loading prompt from: {file_path}")
-
-            if not file_path.exists():
-                print(f"[Service Init] ❌ File not found at: {file_path}")
-                return ""
-
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-                if content:
-                    print(f"[Service Init] ✅ Prompt loaded ({len(content)} chars).")
-                    return content
-                else:
-                    print(f"[Service Init] ⚠️ File found but empty: {filename}")
-                    return ""
-                    
-        except Exception as e:
-            print(f"[Service Init] Error loading prompt: {e}")
+            if file_path.exists():
+                with open(file_path, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+            return ""
+        except Exception:
             return ""
 
-    def _call_gemini_structured(self, user_prompt, system_instruction, response_schema):
+    def _call_gemini_structured(self, user_prompt, system_instruction, response_schema) -> Tuple[Any, Dict]:
+        """
+        Helper that returns (JSON_Result, Usage_Dict).
+        Does NOT log to Langfuse directly to avoid context context issues.
+        """
         if not self.api_key:
             raise EnvironmentError("API key is not set.")
         
@@ -119,41 +106,77 @@ class CarSearchService:
                 response.raise_for_status() 
             
             result = response.json()
+            
+            # Extract Usage
+            usage_data = {}
+            usage = result.get("usageMetadata", {})
+            if usage:
+                usage_data = {
+                    "input": usage.get("promptTokenCount", 0),
+                    "output": usage.get("candidatesTokenCount", 0),
+                    "total": usage.get("totalTokenCount", 0)
+                }
+
             json_str = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '{}')
-            return json.loads(json_str)
+            return json.loads(json_str), usage_data
 
         return attempt_call()
 
-    @observe(as_type="generation")
+    @observe()
     def parse_query(self, user_query: str) -> Dict[str, Any]:
         if not self.api_key: return {}
+        
+        # 1. Log Input
+        langfuse_context.update_current_observation(
+            model=self.LLM_MODEL,
+            input=user_query
+        )
+
         try:
-            filters = self._call_gemini_structured(user_query, self.parse_system_prompt, self.parse_schema)
+            # Get result AND usage
+            filters, usage = self._call_gemini_structured(user_query, self.parse_system_prompt, self.parse_schema)
             print(f"[parse_query] Parsed filters: {filters}")
+            
+            # 2. Log Output & Usage
+            langfuse_context.update_current_observation(
+                output=filters,
+                usage=usage
+            )
             return filters
         except Exception as e:
-            print(f"[parse_query] Error parsing query: {e}")
+            print(f"[parse_query] Error: {e}")
+            langfuse_context.update_current_observation(level="ERROR", status_message=str(e), output=str(e))
             return {}
 
-    @observe(as_type="span")
+    @observe()
     def search_cars(self, filters: dict) -> list:
         cleaned = {k: v for k, v in filters.items() if v is not None}
+        
+        # 1. Log Input
+        langfuse_context.update_current_observation(input=cleaned)
+        
         try:
             print(f"[Scraper] Search initiated for: {cleaned}")
-            return self.scraper.search(
+            results = self.scraper.search(
                 brand=cleaned.get('brand', ''), 
                 model=cleaned.get('model', ''), 
                 min_price=cleaned.get('min_price'),
                 max_price=cleaned.get('max_price'), 
                 min_year=cleaned.get('min_year')
             )
+            
+            # 2. Log Output
+            langfuse_context.update_current_observation(output=f"Found {len(results)} cars")
+            return results
         except Exception as e:
-            print(f"[search_cars] Error during scraping: {e}")
+            print(f"[search_cars] Error: {e}")
+            langfuse_context.update_current_observation(level="ERROR", status_message=str(e))
             return []
 
-    @observe(as_type="generation")
+    @observe()
     def rank_and_annotate(self, user_query: str, results: list) -> list:
         if not self.api_key or not results: return results 
+        
         cars_to_process = results[:15]
         
         system_instr = (
@@ -168,6 +191,12 @@ class CarSearchService:
         ]
 
         prompt = f"User Query: '{user_query}'\n\nListings to Rank:\n{json.dumps(simplified_input)}"
+        
+        # 1. Log Input
+        langfuse_context.update_current_observation(
+            model=self.LLM_MODEL,
+            input=prompt
+        )
 
         response_schema = {
             "type": "OBJECT",
@@ -186,7 +215,15 @@ class CarSearchService:
         }
 
         try:
-            processed_data = self._call_gemini_structured(prompt, system_instr, response_schema)
+            # Get result AND usage
+            processed_data, usage = self._call_gemini_structured(prompt, system_instr, response_schema)
+            
+            # 2. Log Output & Usage
+            langfuse_context.update_current_observation(
+                output=processed_data,
+                usage=usage
+            )
+
             new_ordered_list = []
             for item in processed_data.get("ranked_cars", []):
                 original_index = item.get("original_id")
@@ -195,6 +232,7 @@ class CarSearchService:
                     car['ai_description'] = item.get("ai_description", "Matches your search criteria.")
                     new_ordered_list.append(car)
             
+            # Add remaining
             if len(new_ordered_list) < len(cars_to_process):
                 used_ids = {item.get("original_id") for item in processed_data.get("ranked_cars", [])}
                 for i, car in enumerate(cars_to_process):
@@ -204,9 +242,10 @@ class CarSearchService:
             return new_ordered_list
         except Exception as e:
             print(f"[rank_and_annotate] Error: {e}")
+            langfuse_context.update_current_observation(level="ERROR", status_message=str(e))
             return results 
 
-    @observe(as_type="generation")
+    @observe()
     def summarize_results(self, results: list, context_text: str = "") -> str:
         if not self.api_key or not results: return "Unable to generate summary."
 
@@ -220,6 +259,12 @@ class CarSearchService:
         results_sample = json.dumps(results[:15], indent=2)
         full_prompt = f"{context_block}\n\nMARKET DATA:\n{results_sample}\n\nPlease provide a market snapshot:"
 
+        # 1. Log Input
+        langfuse_context.update_current_observation(
+            model=self.LLM_MODEL,
+            input=full_prompt
+        )
+
         try:
             payload = {
                 "contents": [{"parts": [{"text": full_prompt}]}],
@@ -228,12 +273,35 @@ class CarSearchService:
             }
             headers = {'Content-Type': 'application/json'}
             response = requests.post(f"{self.api_url}?key={self.api_key}", headers=headers, data=json.dumps(payload))
-            if response.status_code != 200: return "Error generating summary."
-            return response.json().get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'Analysis unavailable.')
+            
+            if response.status_code != 200:
+                err_msg = f"Error: Status {response.status_code}"
+                langfuse_context.update_current_observation(level="ERROR", status_message=err_msg)
+                return err_msg
+            
+            result_json = response.json()
+            result_text = result_json.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'Analysis unavailable.')
+            
+            # Extract Usage
+            usage = {}
+            if "usageMetadata" in result_json:
+                usage = {
+                    "input": result_json["usageMetadata"].get("promptTokenCount", 0),
+                    "output": result_json["usageMetadata"].get("candidatesTokenCount", 0),
+                    "total": result_json["usageMetadata"].get("totalTokenCount", 0)
+                }
+
+            # 2. Log Output & Usage
+            langfuse_context.update_current_observation(
+                output=result_text,
+                usage=usage
+            )
+            return result_text
         except Exception as e:
+            langfuse_context.update_current_observation(level="ERROR", status_message=str(e))
             return f"Error summarizing: {e}"
 
-    @observe(as_type="generation")
+    @observe()
     def chat_about_results(self, question: str, results: list, context_text: str = "") -> str:
         if not self.api_key: return "API key missing."
         
@@ -242,6 +310,12 @@ class CarSearchService:
         results_json = json.dumps(results[:15], indent=2)
         full_prompt = f"{context_block}\n\nCAR LISTINGS (JSON):\n{results_json}\n\nUSER QUESTION: {question}"
         
+        # 1. Log Input
+        langfuse_context.update_current_observation(
+            model=self.LLM_MODEL,
+            input=full_prompt
+        )
+
         try:
             payload = {
                 "contents": [{"parts": [{"text": full_prompt}]}],
@@ -250,8 +324,27 @@ class CarSearchService:
             }
             headers = {'Content-Type': 'application/json'}
             response = requests.post(f"{self.api_url}?key={self.api_key}", headers=headers, data=json.dumps(payload))
-            return response.json().get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'Error generating response.')
+            
+            result_json = response.json()
+            result_text = result_json.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', 'Error generating response.')
+            
+            # Extract Usage
+            usage = {}
+            if "usageMetadata" in result_json:
+                usage = {
+                    "input": result_json["usageMetadata"].get("promptTokenCount", 0),
+                    "output": result_json["usageMetadata"].get("candidatesTokenCount", 0),
+                    "total": result_json["usageMetadata"].get("totalTokenCount", 0)
+                }
+            
+            # 2. Log Output & Usage
+            langfuse_context.update_current_observation(
+                output=result_text,
+                usage=usage
+            )
+            return result_text
         except Exception as e:
+            langfuse_context.update_current_observation(level="ERROR", status_message=str(e))
             return f"Error: {e}"
             
     def __del__(self):
