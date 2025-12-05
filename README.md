@@ -1,289 +1,242 @@
-# 🎫 HelpDesk AI
+🚗 CarSearch AI
 
-**Starter template** demonstrating clean architecture and integration of course concepts (Weeks 1-8).
+AI-powered automotive assistant combining intelligent scraping, market analysis, negotiation support and scam-risk detection.
 
-> **Note**: This is a learning template built during Week 9's live coding session. It provides a foundation for understanding how AI concepts integrate, not a production-ready application.
+Note: This project was developed for educational purposes.
+It demonstrates AI integration, architecture design and Streamlit UI — not a production-grade system.
 
-## What This Template Demonstrates
+✨ What This Application Does
 
-This starter template shows how to:
-- 📊 **Classify** support tickets by category and urgency using structured AI outputs
-- ⏰ **Calculate** SLA deadlines based on priority using function calling tools
-- 🎯 **Route** tickets to appropriate teams with business logic
-- 💬 **Generate** suggested responses using AI prompting patterns
-- 🔍 **Enable** natural language Q&A about tickets with chat sessions
+CarSearch AI allows users to:
 
-## Course Concepts Demonstrated
+🔍 Search car listings & parse structured data
 
-| Week | Concept | Where to Find It |
-|------|---------|------------------|
-| 1 | Environment setup, dependencies | `.env`, `pyproject.toml` |
-| 2 | API calls, chat sessions | `services/ai_service.py` |
-| 3 | Structured outputs, prompting | `ai_service.classify_ticket()`, `prompts/*.txt` |
-| 4 | Document processing | (Extensible for email/PDF tickets) |
-| 5 | Function calling | `tools/sla_calculator.py`, `tools/business_hours.py` |
-| 6 | Streamlit UI | `app.py` |
-| 7 | Langfuse tracing | `@observe()` decorators throughout |
-| 8 | Clean architecture | Service layers, prompt separation, `utils/prompts.py` |
+🤖 Rank vehicles using AI reasoning
 
-## Project Structure
+🧠 Chat about search results with contextual awareness
 
-```
-helpdesk_ai/
-├── app.py                          # Streamlit UI (Week 6)
-├── .env.example                    # Environment template
-├── pyproject.toml                  # Dependencies (uv)
+💸 Evaluate price fairness
+
+🚨 Detect scam risk from listing description
+
+🤝 Generate negotiation messages (PT)
+
+⛽ Calculate fuel costs + AI explanation
+
+📄 Read PDF guides/VIN reports for contextual analysis
+
+🧩 Concepts Demonstrated
+Area	Concept	Location
+Environment	Setup, config	.env, pyproject.toml
+AI	REST Gemini API wrapper	utils/ai.py
+Prompt Engineering	Templates & formatting	prompts/*.txt
+Business Logic	Modular services	services/*.py
+Scraping	Standvirtual car extraction	car_search_system.py
+ML Reasoning	AI ranking, analysis	offer_analysis_service.py
+UI	Streamlit frontend	app.py
+Architecture	Clean layering	services → utils → components
+📁 Project Structure
+carsearch_ai/
+├── app.py                           # Streamlit UI (main entry point)
+├── .env.example                     # Template for environment variables
+├── pyproject.toml                   # Dependencies and project configuration
 │
-├── prompts/                        # AI prompt templates (Week 8)
-│   ├── README.md                   # Prompt documentation
-│   ├── classify_ticket.txt         # Classification prompt
-│   ├── suggest_response_system.txt # Response generation (system)
-│   ├── suggest_response_user.txt   # Response generation (user)
-│   └── answer_question_system.txt  # Chat Q&A prompt
+├── services/                        # Business logic layer
+│   ├── car_search_system.py         # Scraping, ranking, summarisation
+│   ├── fuel_cost_service.py         # Fuel cost computations
+│   ├── offer_analysis_service.py    # Scam risk, pricing, negotiation logic
 │
-├── services/                       # Business logic layer
-│   ├── ai_service.py               # All Gemini API calls (Week 2-3)
-│   └── ticket_service.py           # Main orchestration
+├── utils/                           # Shared utilities
+│   ├── ai.py                        # Central Gemini API wrapper
+│   ├── prompts.py                   # Prompt loader
+│   └── tracing.py                   # Optional tracing
 │
-├── tools/                          # Function calling tools (Week 5)
-│   ├── sla_calculator.py           # Calculate SLA deadlines
-│   └── business_hours.py           # Business hours checking
+├── components/
+│   └── negotiation_ui.py            # UI components for negotiation results
 │
-└── utils/                          # Shared utilities
-    ├── prompts.py                  # Prompt loader utility
-    └── tracing.py                  # Langfuse configuration (Week 7)
-```
+└── prompts/
+    ├── search_prompt.txt
+    ├── market_summary.txt
+    └── negotiation_prompt.txt
 
-## Setup Instructions
+⚙️ Setup Instructions
+1. Clone the repository
+git clone <repo-url>
+cd carsearch_ai
 
-### 1. Clone and Navigate
+2. Install dependencies
 
-```bash
-cd Week_9/helpdesk_ai
-```
+Using uv (recommended):
 
-### 2. Install Dependencies
-
-Using `uv` (recommended):
-```bash
 uv sync
-```
+
 
 Or using pip:
-```bash
+
 pip install -r requirements.txt
-```
 
-### 3. Configure Environment
+3. Configure environment variables
 
-Copy `.env.example` to `.env`:
-```bash
+Copy template:
+
 cp .env.example .env
-```
 
-Edit `.env` and add your API keys:
-```
-GOOGLE_API_KEY=your_gemini_api_key_here
-```
 
-Get your Gemini API key at: https://aistudio.google.com/apikey
+Add your API key:
 
-### 4. (Optional) Configure Langfuse Tracing
+GOOGLE_API_KEY=your_key_here
 
-For observability, add Langfuse keys to `.env`:
-```
-LANGFUSE_PUBLIC_KEY=your_public_key
-LANGFUSE_SECRET_KEY=your_secret_key
-LANGFUSE_HOST=https://cloud.langfuse.com
-```
 
-Sign up at: https://cloud.langfuse.com
+Get one here → https://aistudio.google.com/apikey
 
-**Note:** The app works without Langfuse, but you won't see traces.
+4. Run the app
 
-### 5. Run the App
+Using uv:
 
-```bash
 uv run streamlit run app.py
-```
+
 
 Or:
-```bash
+
 streamlit run app.py
-```
 
-The app will open in your browser at `http://localhost:8501`
 
-## How to Use
+The app launches at:
+👉 http://localhost:8501
 
-### Analyze a Ticket
+🧑‍💻 How to Use
+🔍 Search Cars
 
-1. Go to the "📝 Analyze Ticket" tab
-2. Either:
-   - Click a sample ticket button, OR
-   - Paste your own ticket text
-3. Click "🔍 Analyze Ticket"
-4. View the analysis:
-   - Urgency level (Critical/High/Medium/Low)
-   - Category (Authentication, Billing, etc.)
-   - SLA deadline
-   - Routing team
-   - Suggested response
+Enter natural-language criteria
 
-### Chat About a Ticket
+System scrapes listings
 
-1. After analyzing a ticket, go to "💬 Chat About Ticket" tab
-2. Ask questions like:
-   - "What team should handle this?"
-   - "How urgent is this issue?"
-   - "What are the next steps?"
-3. Get AI-powered answers based on the ticket context
+AI ranks them
 
-## Architecture Highlights
+Summary overview is provided
 
-### Clean Separation of Concerns (Week 8)
+💬 Chat About Cars
 
-**UI Layer** (`app.py`):
-- Only handles display and user interaction
-- No business logic
-- Calls service methods
+Ask questions like:
 
-**Service Layer** (`services/`):
-- Contains all business logic
-- Orchestrates AI and tools
-- Testable without UI
+"Which one is best value?"
 
-**AI Layer** (`services/ai_service.py`):
-- All Gemini API interactions
-- Loads prompts from `prompts/` directory
-- Isolated from business logic
-- Easy to swap models
+"Is the mileage suspicious?"
 
-**Prompts Layer** (`prompts/`):
-- Separate prompt templates from code
-- Easy to edit and iterate
-- Version controlled independently
-- Non-developers can modify
+"Compare the top 3."
 
-**Tools Layer** (`tools/`):
-- Pure functions for calculations
-- Can be used as function calling tools
-- Independently testable
+AI answers using your current search + PDF context.
 
-### Observable (Week 7)
+🤝 Negotiation Helper
 
-Every function decorated with `@observe()`:
-- View in Langfuse dashboard
-- See full execution trace
-- Debug production issues
-- Track performance
+Paste offer details → system returns:
 
-## Sample Tickets
+Scam risk (green / yellow / red)
 
-The app includes sample tickets you can try:
+Price position
 
-**Critical:**
-> I can't log into my account. It keeps saying my password is invalid even though I'm sure it's correct. I've tried resetting it twice but the email never arrives. This is urgent!
+Discount suggestion
 
-**Medium:**
-> The dashboard is loading very slowly, taking 30+ seconds. This started happening this morning.
+Full justification
 
-Or try the `../sample_data/tickets.json` file for 30 realistic examples!
+Portuguese negotiation message
 
-## Extending the App
+⛽ Fuel & Cost Analyzer
 
-This architecture makes it easy to add features:
+Input:
 
-### Edit Prompts (No Code Changes!)
-```bash
-# Just edit the text files in prompts/
-# Restart the app - that's it!
-nano prompts/classify_ticket.txt
-uv run streamlit run app.py
-```
+km/month
 
-See `prompts/README.md` for detailed prompt engineering guide.
+fuel consumption
 
-### Add Email Parsing (Week 4)
-```python
-# services/email_service.py
-def parse_email(email_file):
-    # Extract text from email
-    # Return ticket text
-```
+fuel price
 
-### Add Analytics
-```python
-# services/analytics_service.py
-def get_ticket_stats():
-    # Category distribution
-    # Average response time
-    # Team workload
-```
+AI explains cost patterns and gives recommendations.
 
-### Add Multi-language Support
-```python
-# services/ai_service.py
-def detect_language(text):
-    # Detect customer language
-    # Respond in same language
-```
+🔧 Architecture Details
+UI Layer — app.py
 
-## Adapting for Your Project
+Manages Streamlit pages
 
-This structure works for many domains:
+No business logic
 
-**Legal:** Tickets → Case requests
-```python
-class CaseService:
-    def process_case(self, case_text):
-        # Classify legal case
-        # Calculate filing deadlines
-        # Route to legal team
-```
+Calls services only
 
-**Medical:** Tickets → Patient queries
-```python
-class PatientQueryService:
-    def process_query(self, query_text):
-        # Classify medical query
-        # Determine urgency
-        # Route to specialist
-```
+Service Layer
 
-**Academic:** Tickets → Student questions
-```python
-class StudentQuestionService:
-    def process_question(self, question_text):
-        # Classify by subject
-        # Determine complexity
-        # Route to TA/professor
-```
+Located in services/:
 
-## Common Issues
+File	Responsibility
+car_search_system.py	Scraping, ranking, summarising
+offer_analysis_service.py	Scam detection, pricing logic
+fuel_cost_service.py	Fuel cost computation
+AI Layer — utils/ai.py
 
-### "GOOGLE_API_KEY not found"
-- Make sure you created `.env` file
-- Check the key is correctly copied
-- No spaces or quotes around the key
+Contains central Gemini REST API wrapper
 
-### "Langfuse tracing not configured"
-- This is just a warning
-- App works without Langfuse
-- Add Langfuse keys if you want tracing
+Allows changing model in one place
 
-### Import Errors
-- Make sure you're in the `helpdesk_ai/` directory
-- Run `uv sync` to install dependencies
-- Check Python version is 3.11+
+Handles errors & rate limits
 
-## Learn More
+Prompt Layer — prompts/*.txt
 
-- **Google Gemini:** https://ai.google.dev/
-- **Streamlit:** https://docs.streamlit.io/
-- **Langfuse:** https://langfuse.com/docs
-- **UV Package Manager:** https://docs.astral.sh/uv/
+Editable without touching code
 
-## License
+Clean separation
 
-Educational use - Week 9 Integration Workshop
+⚠️ Handling AI Quota Errors
+
+During testing we encountered this error:
+
+Gemini API error (429):
+"You exceeded your current quota...
+Quota exceeded for metric: generate_content_free_tier_requests
+retryDelay: 54s"
+
+
+To mitigate such issues, the app is structured so that:
+
+All AI calls go through one wrapper → easy model swap
+
+Fallback models can be introduced
+
+Caching can reduce repeated calls
+
+Centralized error handling prevents UI crashes
+
+🚀 Future Improvements
+
+Support for OLX, Autoscout24, mobile.de
+
+Image recognition for car model detection
+
+VIN API integrations (CarVertical, AutoDNA)
+
+User logins & saved searches
+
+Alerts for new listings
+
+🛠️ Common Issues
+"GOOGLE_API_KEY not found"
+
+→ Ensure .env exists and contains your key.
+
+Scraping returns empty data
+
+→ Standvirtual may rate-limit; retry later.
+
+429 quota exceeded
+
+→ Free Gemini tier exhausted; wait or change model in ai.py.
+
+📚 Learn More
+
+Google Gemini → https://ai.google.dev
+
+Streamlit → https://docs.streamlit.io
+
+uv package manager → https://docs.astral.sh/uv
+
+📄 License
+
+Educational use — AI Systems Engineering Project (2024/2025)
