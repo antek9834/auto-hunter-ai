@@ -7,6 +7,8 @@ except RuntimeError:
     pass
 
 import streamlit as st
+import base64
+import os
 from dotenv import load_dotenv
 import pypdf
 from services.car_search_system import CarSearchService
@@ -22,10 +24,72 @@ load_dotenv()
 init_tracing()
 
 st.set_page_config(
-    page_title="CarSearch AI",
+    page_title="Auto Hunter",
     page_icon="🚗",
     layout="wide"
 )
+
+
+# --- FUNCTION TO SET BACKGROUND IMAGE ---
+def set_background(image_file):
+    with open(image_file, "rb") as f:
+        data = f.read()
+    b64_encoded = base64.b64encode(data).decode()
+    style = f"""
+        <style>
+        .stApp {{
+            background-image: url(data:image/png;base64,{b64_encoded});
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+    """
+    st.markdown(style, unsafe_allow_html=True)
+
+    # --- CSS FOR "FLOATING CARD" UI ---
+st.markdown(
+    """
+    <style>
+    /* Target the main container */
+    .block-container {
+        background-color: rgba(0, 0, 0, 0.75); /* 75% opacity black */
+        border-radius: 25px;                   /* Rounded corners */
+        padding: 40px !important;              /* Inner spacing */
+        
+        /* Create the gaps around the box */
+        max-width: 85% !important;             /* Leave 15% space on sides */
+        margin-top: 30px;                      /* Space from top */
+        margin-bottom: 50px;                   /* Space from bottom */
+        margin-left: auto;                     /* Center horizontally */
+        margin-right: auto;                    /* Center horizontally */
+        
+        /* Glassmorphism effect */
+        backdrop-filter: blur(8px);            
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Force text to be white so it is readable on black */
+    h1, h2, h3, h4, h5, h6, p, li, span, div, label {
+        color: white !important;
+    }
+    
+    /* Fix input fields so they aren't transparent/unreadable */
+    .stTextInput > div > div > input, 
+    .stTextArea > div > div > textarea, 
+    .stNumberInput > div > div > input {
+        color: white;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+current_folder = os.path.dirname(__file__)
+image_path = os.path.join(current_folder, "background.jpg")
+set_background(image_path)
 
 # Initialize session state variables
 if 'car_service' not in st.session_state:
@@ -39,7 +103,13 @@ if 'current_results' not in st.session_state:
 if "offer_service" not in st.session_state:
     st.session_state.offer_service = OfferAnalysisService()
 
-st.title("🚗 CarSearch AI")
+header_path = os.path.join(current_folder, "black_header.png")
+
+try:
+    st.image(header_path, use_column_width=True)
+except Exception:
+    # Fallback if image isn't found
+    st.title("🚗 CarSearch AI")
 
 def fuel_cost_page():
     st.title("⛽ Fuel & Cost Analyzer")
