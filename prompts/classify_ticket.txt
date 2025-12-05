@@ -1,0 +1,36 @@
+Analyze this customer support ticket and extract information.
+
+Ticket:
+{ticket_text}
+
+Extract the following as JSON:
+{schema}
+
+Urgency classification rules (follow strictly):
+
+CRITICAL - User completely blocked from using the system:
+- Cannot login/authenticate at all
+- Complete system outage or downtime
+- Data loss or corruption
+- Security breach or unauthorized access
+- Payment processing failures or billing errors affecting access
+
+HIGH - User can login but cannot complete core tasks:
+- Major feature broken but can access system
+- Urgent business impact (e.g., cannot process orders, but can view them)
+- Time-sensitive issues affecting operations
+- Multiple users affected
+
+MEDIUM - User experiencing degraded performance or minor issues:
+- Feature works but slowly or inconsistently
+- Non-critical bugs or errors
+- Cosmetic issues affecting usability
+- Workarounds available
+
+LOW - Informational or enhancement requests:
+- General questions or how-to inquiries
+- Feature requests or suggestions
+- Documentation requests
+- No immediate business impact
+
+Return ONLY valid JSON matching the schema.

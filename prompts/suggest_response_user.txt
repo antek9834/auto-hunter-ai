@@ -1,0 +1,19 @@
+Write a customer support email response for this ticket:
+
+TICKET DETAILS:
+Category: {category}
+Urgency: {urgency}
+Customer: {customer_name}
+Issue: {issue_summary}
+SLA Deadline: {sla_deadline}
+Route to: {route_to}
+
+ORIGINAL TICKET:
+{original_text}
+
+{context}
+
+Generate a complete email response following the structure above.
+Be specific to this {urgency} urgency {category} issue.
+Include realistic action items and timeline based on urgency level.
+Sign off as "The CarSearch AI Support Team".

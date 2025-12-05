@@ -1,0 +1,11 @@
+[project]
+name = "helpdesk-ai"
+version = "1.0.0"
+description = "AI-powered customer support ticket analyzer"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=1.0.0",
+    "streamlit>=1.40.0",
+    "python-dotenv>=1.0.0",
+    "langfuse>=2.0.0",
+]
