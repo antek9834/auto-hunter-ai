@@ -106,7 +106,7 @@ if "offer_service" not in st.session_state:
 header_path = os.path.join(current_folder, "black_header.png")
 
 try:
-    st.image(header_path, use_container_width=True)
+    st.image(header_lumn=True)
 except Exception:
     # Fallback if image isn't found
     st.title("🚗 CarSearch AI")
@@ -234,7 +234,7 @@ with tab1:
                 col1, col2 = st.columns([1, 3])
                 with col1:
                     if car.get('image_url') and "http" in car['image_url']:
-                        st.image(car['image_url'], use_container_width=True)
+                        st.image(car['image_url'], use_column_width=True)
                     else:
                         st.caption("No Image Available")
                 with col2:
