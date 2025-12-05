@@ -2,18 +2,21 @@ import json
 import os
 import backoff
 import requests
-from pathlib import Path
 from typing import Dict, Any, List
 
-# --- SAFE IMPORT FOR LANGFUSE ---
+# --- CORRECT LANGFUSE IMPORT ---
+# The 'observe' decorator is always inside 'langfuse.decorators'
 try:
     from langfuse.decorators import observe
-except ImportError:
+    print("[System] Langfuse found. Tracing enabled.")
+except ImportError as e:
+    print(f"[System] Langfuse error: {e}. Tracing disabled.")
+    # Dummy decorator fallback
     def observe(*args, **kwargs):
         def decorator(func):
             return func
         return decorator
-# --------------------------------
+# -------------------------------
 
 from tools.standvirtual_scraper import StandvirtualScraper
 
@@ -34,18 +37,13 @@ class CarSearchService:
         else:
             print(f"[Service Init] LLM API key loaded.")
         
-        # --- LOAD PROMPT FROM FILE (WITH FALLBACK) ---
-        self.parse_system_prompt = self._load_prompt("car_query.txt")
-        
-        # Fallback if file load failed
-        if not self.parse_system_prompt:
-            print("[Service Init] Prompt file empty or missing. Using hardcoded fallback.")
-            self.parse_system_prompt = (
-                "You are a helpful assistant that extracts structured search parameters from a user's car search query. "
-                "The search will be conducted on Standvirtual. Output MUST be valid JSON. "
-                "Extract fields: brand, model, min_price, max_price, min_year, max_km, fuel, location. "
-                "Rules: If missing, use null. Convert 'k' to thousands."
-            )
+        # --- PROMPT FOR STANDVIRTUAL (PORTUGAL) ---
+        self.parse_system_prompt = (
+            "You are a helpful assistant that extracts structured search parameters from a user's car search query. "
+            "The search will be conducted on Standvirtual (Portugal). Output MUST be valid JSON. "
+            "Extract fields: brand, model, min_price, max_price, min_year, max_km, fuel, location. "
+            "Rules: If missing, use null. Convert 'k' to thousands."
+        )
 
         self.parse_schema = {
             "type": "OBJECT",
@@ -60,36 +58,6 @@ class CarSearchService:
                 "location": {"type": "STRING", "nullable": True}
             }
         }
-
-    def _load_prompt(self, filename: str) -> str:
-        """
-        Robustly resolves the path to the prompts folder and loads the file.
-        """
-        try:
-            # 1. Resolve path relative to this file (services/car_search_system.py)
-            current_dir = Path(__file__).parent.resolve()
-            # Go up one level to project root, then into prompts
-            project_root = current_dir.parent
-            file_path = project_root / "prompts" / filename
-            
-            print(f"[Service Init] Loading prompt from: {file_path}")
-
-            if not file_path.exists():
-                print(f"[Service Init] ❌ File not found at: {file_path}")
-                return ""
-
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-                if content:
-                    print(f"[Service Init] ✅ Prompt loaded ({len(content)} chars).")
-                    return content
-                else:
-                    print(f"[Service Init] ⚠️ File found but empty: {filename}")
-                    return ""
-                    
-        except Exception as e:
-            print(f"[Service Init] Error loading prompt: {e}")
-            return ""
 
     def _call_gemini_structured(self, user_prompt, system_instruction, response_schema):
         if not self.api_key:
@@ -153,6 +121,10 @@ class CarSearchService:
 
     @observe(as_type="generation")
     def rank_and_annotate(self, user_query: str, results: list) -> list:
+        """
+        Re-orders the scraped results based on relevance to the user's query
+        and adds a personalized AI description to each.
+        """
         if not self.api_key or not results: return results 
         cars_to_process = results[:15]
         
@@ -195,13 +167,16 @@ class CarSearchService:
                     car['ai_description'] = item.get("ai_description", "Matches your search criteria.")
                     new_ordered_list.append(car)
             
+            # Append any cars that might have been missed (fallback)
             if len(new_ordered_list) < len(cars_to_process):
                 used_ids = {item.get("original_id") for item in processed_data.get("ranked_cars", [])}
                 for i, car in enumerate(cars_to_process):
                     if i not in used_ids:
                         car['ai_description'] = "Also found matching your criteria."
                         new_ordered_list.append(car)
+            
             return new_ordered_list
+
         except Exception as e:
             print(f"[rank_and_annotate] Error: {e}")
             return results 

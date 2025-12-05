@@ -19,9 +19,16 @@ from utils.ai import call_gemini
 from services.offer_analysis_service import OfferAnalysisService
 from components.negotiation_ui import render_negotiation_analysis
 
+# --- 1. IMPORT LANGFUSE ---
+from langfuse import Langfuse
+
 # Load env vars and init tracing
 load_dotenv()
 init_tracing()
+
+# --- 2. INITIALIZE CLIENT ---
+# We need this object to force the data to be sent
+langfuse = Langfuse()
 
 st.set_page_config(
     page_title="Auto Hunter",
@@ -32,6 +39,8 @@ st.set_page_config(
 
 # --- FUNCTION TO SET BACKGROUND IMAGE ---
 def set_background(image_file):
+    if not os.path.exists(image_file):
+        return
     with open(image_file, "rb") as f:
         data = f.read()
     b64_encoded = base64.b64encode(data).decode()
@@ -47,7 +56,7 @@ def set_background(image_file):
     """
     st.markdown(style, unsafe_allow_html=True)
 
-    # --- CSS FOR "FLOATING CARD" UI ---
+# --- CSS FOR "FLOATING CARD" UI ---
 st.markdown(
     """
     <style>
@@ -106,9 +115,12 @@ if "offer_service" not in st.session_state:
 header_path = os.path.join(current_folder, "black_header.png")
 
 try:
-    st.image(header_path, use_column_width=True)
+    if os.path.exists(header_path):
+        # use_column_width works in older Streamlit versions
+        st.image(header_path, use_column_width=True)
+    else:
+        st.title("🚗 CarSearch AI")
 except Exception:
-    # Fallback if image isn't found
     st.title("🚗 CarSearch AI")
 
 def fuel_cost_page():
@@ -136,6 +148,9 @@ def fuel_cost_page():
         explanation = call_gemini(prompt)
         st.subheader("AI Recommendations")
         st.write(explanation)
+        
+        # --- 3. FLUSH TRACES (Fuel Page) ---
+        langfuse.flush()
 
 # --- SIDEBAR: PDF DOCUMENT INGESTION ---
 with st.sidebar:
@@ -216,6 +231,10 @@ with tab1:
                             st.session_state.search_summary = summary
                         except AttributeError:
                             st.session_state.search_summary = ""
+                    
+                    # --- 3. FLUSH TRACES (Search) ---
+                    langfuse.flush()
+                    # --------------------------------
                 else:
                     st.session_state.current_results = []
                     st.warning("No cars found matching your query. Check the terminal for details.")
@@ -228,12 +247,12 @@ with tab1:
         st.markdown("### 🎯 Best Matches (Ranked by AI)")
         st.success(f"Found {len(results)} listings based on your criteria.")
 
-        # Show Listings
         for car in results:
             with st.container(border=True):
                 col1, col2 = st.columns([1, 3])
                 with col1:
                     if car.get('image_url') and "http" in car['image_url']:
+                        # FIX: Changed use_container_width to use_column_width
                         st.image(car['image_url'], use_column_width=True)
                     else:
                         st.caption("No Image Available")
@@ -279,6 +298,11 @@ with tab2:
         q = st.chat_input("Ask questions (e.g., 'Which represents the best value?')")
         if q:
             st.session_state.chat_history.append({'role': 'user', 'content': q})
+            
+            # Lazy init service if needed (e.g. page refresh)
+            if st.session_state.car_service is None:
+                 st.session_state.car_service = CarSearchService()
+
             with st.spinner("Analyzing..."):
                 ans = st.session_state.car_service.chat_about_results(
                     q,
@@ -286,6 +310,10 @@ with tab2:
                     context_text=st.session_state.pdf_context
                 )
             st.session_state.chat_history.append({'role': 'assistant', 'content': ans})
+            
+            # --- 3. FLUSH TRACES (Chat) ---
+            langfuse.flush()
+            # ------------------------------
             st.rerun()
 
         if st.button("🗑️ Clear Chat"):
@@ -341,6 +369,9 @@ with tab4:
                 year=year,
                 recent_results=st.session_state.get("current_results", [])
             )
+            
+            # --- 3. FLUSH TRACES (Negotiation) ---
+            langfuse.flush()
 
         st.subheader("📊 Negotiation Analysis")
         
