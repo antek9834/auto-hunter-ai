@@ -72,14 +72,14 @@ st.markdown(
 
     /* Force text to be white so it is readable on black */
     h1, h2, h3, h4, h5, h6, p, li, span, div, label {
-        color: white !important;
+        color: black !important;
     }
     
     /* Fix input fields so they aren't transparent/unreadable */
     .stTextInput > div > div > input, 
     .stTextArea > div > div > textarea, 
     .stNumberInput > div > div > input {
-        color: white;
+        color: black;
         background-color: rgba(255, 255, 255, 0.1);
     }
     </style>
@@ -106,7 +106,7 @@ if "offer_service" not in st.session_state:
 header_path = os.path.join(current_folder, "black_header.png")
 
 try:
-    st.image(header_path, use_column_width=True)
+    st.image(header_path, use_container_width=True)
 except Exception:
     # Fallback if image isn't found
     st.title("🚗 CarSearch AI")
@@ -234,7 +234,7 @@ with tab1:
                 col1, col2 = st.columns([1, 3])
                 with col1:
                     if car.get('image_url') and "http" in car['image_url']:
-                        st.image(car['image_url'], use_column_width=True)
+                        st.image(car['image_url'], use_container_width=True)
                     else:
                         st.caption("No Image Available")
                 with col2:
