@@ -11,7 +11,6 @@ import base64
 import os
 import uuid  
 from dotenv import load_dotenv
-import pypdf
 from services.car_search_system import CarSearchService
 from utils.tracing import init_tracing
 from services.fuel_cost_service import FuelCostAnalysisService
@@ -177,38 +176,19 @@ def fuel_cost_page():
         # --- 3. FLUSH ---
         langfuse.flush()
 
-# --- SIDEBAR: PDF DOCUMENT INGESTION ---
+# --- SIDEBAR
 with st.sidebar:
     st.header("How to use the app")
     st.markdown("""
     **1. 🔍 Search Cars:**
     Enter your criteria (e.g., *"Diesel BMW 320d under 20k"*). The AI will find live listings on Standvirtual and rank them for you.
 
-    **2. 📁 Document Ingestion:**
-    Upload a PDF below (e.g., **Insurance Policy**, **Mechanic Guide**, or **Budget Plan**). The AI will use this document to answer specific questions in the Chat tab (e.g., *"Does this car fit my insurance criteria?"*).
-
-    **3. 💬 Chat:**
+    **2. 2 Chat:**
     After searching, switch to the Chat tab to ask questions about the results and your uploaded document.
 
-    **4. 🤝 Negotiation:**
+    **3. 🤝 Negotiation:**
     Found a specific car? Paste its description in the Negotiation tab to get a price analysis and a message to send to the seller.
     """)
-    
-    st.divider()
-    
-    st.header("📁 Document Ingestion")
-    uploaded_file = st.file_uploader("Upload Guide/Policy (PDF)", type="pdf")
-    if uploaded_file:
-        try:
-            with st.spinner("Processing PDF..."):
-                pdf_reader = pypdf.PdfReader(uploaded_file)
-                text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
-                st.session_state.pdf_context = text
-                st.success(f"✅ Ingested {len(pdf_reader.pages)} pages!")
-        except Exception as e:
-            st.error(f"Error reading PDF: {e}")
 
 # Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
