@@ -9,7 +9,7 @@ except RuntimeError:
 import streamlit as st
 import base64
 import os
-import uuid  # NEW: For generating session IDs
+import uuid  
 from dotenv import load_dotenv
 import pypdf
 from services.car_search_system import CarSearchService
@@ -19,13 +19,17 @@ from utils.prompts import PromptLoader
 from utils.ai import call_gemini
 from services.offer_analysis_service import OfferAnalysisService
 from components.negotiation_ui import render_negotiation_analysis
-
-# --- 1. NEW IMPORTS FOR TRACING ---
 from langfuse.decorators import observe, langfuse_context
+# --- 1. ADD IMPORT FOR FLUSHING ---
+from langfuse import Langfuse
 
 # Load env vars and init tracing
 load_dotenv()
 init_tracing()
+
+# --- 2. INITIALIZE CLIENT FOR FLUSHING ---
+# This client instance is needed specifically to call .flush()
+langfuse = Langfuse()
 
 st.set_page_config(
     page_title="Auto Hunter",
@@ -169,11 +173,30 @@ def fuel_cost_page():
         explanation = call_gemini(prompt)
         st.subheader("AI Recommendations")
         st.write(explanation)
+        
+        # --- 3. FLUSH ---
+        langfuse.flush()
 
 # --- SIDEBAR: PDF DOCUMENT INGESTION ---
 with st.sidebar:
+    st.header("How to use the app")
+    st.markdown("""
+    **1. 🔍 Search Cars:**
+    Enter your criteria (e.g., *"Diesel BMW 320d under 20k"*). The AI will find live listings on Standvirtual and rank them for you.
+
+    **2. 📁 Document Ingestion:**
+    Upload a PDF below (e.g., **Insurance Policy**, **Mechanic Guide**, or **Budget Plan**). The AI will use this document to answer specific questions in the Chat tab (e.g., *"Does this car fit my insurance criteria?"*).
+
+    **3. 💬 Chat:**
+    After searching, switch to the Chat tab to ask questions about the results and your uploaded document.
+
+    **4. 🤝 Negotiation:**
+    Found a specific car? Paste its description in the Negotiation tab to get a price analysis and a message to send to the seller.
+    """)
+    
+    st.divider()
+    
     st.header("📁 Document Ingestion")
-    st.markdown("Upload a guide or policy to help the AI answer questions (e.g., 'Does this car fit my insurance?').")
     uploaded_file = st.file_uploader("Upload Guide/Policy (PDF)", type="pdf")
     if uploaded_file:
         try:
@@ -242,6 +265,9 @@ with tab1:
                             st.session_state.search_summary = summary
                         except AttributeError:
                             st.session_state.search_summary = ""
+                            
+                    # --- 3. FLUSH ---
+                    langfuse.flush()
                 else:
                     st.session_state.current_results = []
                     st.warning("No cars found matching your query. Check the terminal for details.")
@@ -262,6 +288,7 @@ with tab1:
                         st.caption("No Image Available")
                 with col2:
                     st.subheader(car.get('title', 'No Title'))
+                    # AI Description
                     if car.get('ai_description'):
                         st.info(f"🤖 **AI says:** {car['ai_description']}")
                     
@@ -271,6 +298,7 @@ with tab1:
                         f"**KM:** {car.get('km', 0):,} km | "
                         f"**Fuel:** {car.get('fuel', 'N/A')}"
                     )
+                    
                     if car.get('link'):
                         st.markdown(f"[👉 View Full Listing]({car['link']})")
 
@@ -299,14 +327,21 @@ with tab2:
         q = st.chat_input("Ask questions (e.g., 'Which represents the best value?')")
         if q:
             st.session_state.chat_history.append({'role': 'user', 'content': q})
+            
+            # Lazy init service if needed (e.g. page refresh)
+            if st.session_state.car_service is None:
+                 st.session_state.car_service = CarSearchService()
+
             with st.spinner("Analyzing..."):
-                # Ensure chat_about_results is decorated in the Service class
                 ans = st.session_state.car_service.chat_about_results(
                     q,
                     st.session_state.current_results,
                     context_text=st.session_state.pdf_context
                 )
             st.session_state.chat_history.append({'role': 'assistant', 'content': ans})
+            
+            # --- 3. FLUSH ---
+            langfuse.flush()
             st.rerun()
 
         if st.button("🗑️ Clear Chat"):
@@ -315,6 +350,7 @@ with tab2:
 
 # --- TAB 4: Offer Negotiation Helper ---
 with tab4:
+    # ensure service exists
     if "offer_service" not in st.session_state:
         st.session_state.offer_service = OfferAnalysisService()
 
@@ -327,12 +363,19 @@ with tab4:
         "- Write a message to negotiate in Portuguese\n"
     )
 
+    # ---- User Inputs ----
     col1, col2 = st.columns(2)
     with col1:
-        price = st.number_input("Price (€)", min_value=0.0, max_value=100000.0, step=100.0)
+        price = st.number_input(
+            "Price (€)", min_value=0.0, max_value=100000.0, step=100.0
+        )
     with col2:
-        mileage = st.slider("Mileage (km)", min_value=0, max_value=1_000_000, step=1000, value=150000)
-        year = st.slider("Production Year", min_value=1900, max_value=2025, value=2015)
+        mileage = st.slider(
+            "Mileage (km)", min_value=0, max_value=1_000_000, step=1000, value=150000
+        )
+        year = st.slider(
+            "Production Year", min_value=1900, max_value=2025, value=2015
+        )
 
     car_description = st.text_area(
         "Paste the full description from the listing:",
@@ -340,6 +383,7 @@ with tab4:
         placeholder="Example: Honda Civic 1.4i S, 2001, 107,000 km..."
     )
 
+    # ---- RUN ANALYSIS ----
     if st.button("Analyze Offer", type="primary"):
         if not car_description.strip():
             st.warning("Please paste the listing description.")
@@ -355,24 +399,29 @@ with tab4:
                 year,
                 st.session_state.get("current_results", [])
             )
+            # --- 3. FLUSH ---
+            langfuse.flush()
 
         st.subheader("📊 Negotiation Analysis")
         
+        # Safety check – prevents undefined variable errors
         if not analysis:
             st.error("AI returned no analysis. Please try again.")
             st.stop()
 
+        # Scam color logic
         risk = analysis.get("scam_risk_score", 50)
         if risk < 30:
-            color = "#2ecc71"
+            color = "#2ecc71"  # green
             label = "Low Scam Risk"
         elif risk < 70:
-            color = "#f1c40f"
+            color = "#f1c40f"  # yellow
             label = "Medium Scam Risk"
         else:
-            color = "#e74c3c"
+            color = "#e74c3c"  # red
             label = "High Scam Risk"
 
+        # --- DISPLAY RESULTS ---
         st.markdown(
             f"""
             <div style='padding: 12px; border-radius: 8px; background-color:{color}; color:white;'>
@@ -403,3 +452,7 @@ with tab4:
 
         st.write("### 📩 Negotiation Message (PT)")
         st.code(analysis.get("buyer_message", "No message generated."), language="markdown")
+
+# Footer
+st.divider()
+st.caption("Built with ❤️ using Streamlit | CarSearch AI")

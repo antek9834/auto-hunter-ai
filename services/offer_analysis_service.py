@@ -1,8 +1,14 @@
 import os
 import json
-import requests
 from utils.ai import call_gemini
 
+# Safe Import for Langfuse
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    def observe(*args, **kwargs):
+        def decorator(func): return func
+        return decorator
 
 class OfferAnalysisService:
     """
@@ -14,9 +20,9 @@ class OfferAnalysisService:
     """
 
     def __init__(self):
-        self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.model = "gemini-1.5-flash"
+        self.model = "gemini-2.5-flash-preview-09-2025"
 
+    @observe(as_type="generation")
     def analyze(self, description, price, mileage, year, recent_results=None):
         """
         Uses Gemini to analyze a car offer.
@@ -79,7 +85,7 @@ Now output JSON ONLY in this format:
             return {
                 "price_position": "Unable to determine.",
                 "suggested_discount_eur": 0,
-                "justification": "AI returned invalid format.",
+                "justification": f"AI returned invalid format: {llm_response[:100]}...",
                 "scam_risk_score": 50,
                 "scam_reasons": ["Could not parse AI output."],
                 "buyer_message": "Desculpa — não consegui analisar a oferta."

@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
@@ -9,13 +10,14 @@ BASE_DIR = Path(__file__).parent.parent.resolve()
 env_path = BASE_DIR / ".env"
 load_dotenv(env_path)
 
-API_KEY = os.getenv("GOOGLE_API_KEY")
-MODEL = "gemini-2.0-flash-exp"  # stabilny model REST
+API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+
+# UPDATE: Use the same stable model as CarSearchService
+MODEL = "gemini-2.5-flash-preview-09-2025" 
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
 URL = f"{BASE_URL}{MODEL}:generateContent"
 
-print("[utils.ai] Gemini API KEY loaded:", "YES" if API_KEY else "NO")
-
+print(f"[utils.ai] Gemini API KEY loaded: {'YES' if API_KEY else 'NO'}")
 
 def call_gemini(prompt: str, system_instruction: str = None) -> str:
     if not API_KEY:
@@ -31,26 +33,44 @@ def call_gemini(prompt: str, system_instruction: str = None) -> str:
 
     headers = {"Content-Type": "application/json"}
 
-    try:
-        resp = requests.post(
-            f"{URL}?key={API_KEY}",
-            headers=headers,
-            data=json.dumps(payload)
-        )
+    # --- RETRY LOGIC FOR 429 ERRORS ---
+    max_retries = 3
+    base_wait = 2 # seconds
 
-        if resp.status_code != 200:
-            return f"Gemini API error ({resp.status_code}): {resp.text}"
+    for attempt in range(max_retries):
+        try:
+            resp = requests.post(
+                f"{URL}?key={API_KEY}",
+                headers=headers,
+                data=json.dumps(payload)
+            )
 
-        data = resp.json()
+            # Success
+            if resp.status_code == 200:
+                data = resp.json()
+                text = (
+                    data.get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                )
+                return text or "Gemini returned an empty response."
 
-        text = (
-            data.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-        )
+            # Rate Limit Error
+            elif resp.status_code == 429:
+                if attempt < max_retries - 1:
+                    wait_time = base_wait * (2 ** attempt) # Exponential backoff: 2, 4, 8...
+                    print(f"[utils.ai] Rate limit hit (429). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    return f"Gemini API error (429): Rate limit exceeded after {max_retries} retries."
 
-        return text or "Gemini returned an empty response."
+            # Other Errors
+            else:
+                return f"Gemini API error ({resp.status_code}): {resp.text}"
 
-    except Exception as e:
-        return f"Gemini API error: {e}"
+        except Exception as e:
+            return f"Gemini API connection error: {e}"
+
+    return "Gemini API error: Unknown failure."

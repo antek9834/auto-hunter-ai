@@ -4,6 +4,7 @@ import backoff
 import requests
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
+from tools.standvirtual_scraper import StandvirtualScraper
 
 # --- LANGFUSE TRACING SETUP ---
 try:
@@ -15,14 +16,6 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
-    
-    class DummyContext:
-        def update_current_observation(self, **kwargs): pass
-        
-    langfuse_context = DummyContext()
-# ------------------------------
-
-from tools.standvirtual_scraper import StandvirtualScraper
 
 class CarSearchService:
     

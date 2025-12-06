@@ -1,8 +1,16 @@
-
 from tools.fuel_tools import calculate_fuel_cost, calculate_additional_consumption
+
+# Safe Import for Langfuse
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    def observe(*args, **kwargs):
+        def decorator(func): return func
+        return decorator
 
 class FuelCostAnalysisService:
     
+    @observe(as_type="span")
     def analyze(self, km_per_month, avg_consumption, fuel_price, avg_person_weight=None, num_people=None):
         result = calculate_fuel_cost(
             km_per_month, avg_consumption, fuel_price
