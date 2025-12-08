@@ -67,6 +67,7 @@ Now output JSON ONLY in this format:
 
         # Call Gemini using existing helper
         llm_response = call_gemini(prompt)
+        
 
         # LLM sometimes prints explanation before JSON → extract JSON safely
         try:
