@@ -1,4 +1,5 @@
 import multiprocessing
+from components.document_ui import render_document_tab
 
 try:
     # Fix for Streamlit + Selenium/Multiprocessing on macOS/Linux
@@ -11,6 +12,7 @@ import base64
 import os
 import uuid  
 from dotenv import load_dotenv
+
 from services.car_search_system import CarSearchService
 from utils.tracing import init_tracing
 from services.fuel_cost_service import FuelCostAnalysisService
@@ -191,11 +193,12 @@ with st.sidebar:
     """)
 
 # Tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔍 Search Cars",
     "💬 Chat About Cars",
     "⛽ Fuel & Cost Analyzer",
-    "🤝 Negotiation Helper"
+    "🤝 Negotiation Helper",
+    "📄 Document Inspector"  
 ])
 
 # --- TAB 3: FUEL COST ANALYZER ---
@@ -432,6 +435,9 @@ with tab4:
 
         st.write("### 📩 Negotiation Message (PT)")
         st.code(analysis.get("buyer_message", "No message generated."), language="markdown")
+
+with tab5:
+    render_document_tab()
 
 # Footer
 st.divider()
