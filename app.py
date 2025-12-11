@@ -28,7 +28,7 @@ from langfuse import Langfuse
 load_dotenv()
 init_tracing()
 
-# --- 2. INITIALIZE CLIENT FOR FLUSHING ---
+# INITIALIZE CLIENT FOR FLUSHING 
 # This client instance is needed specifically to call .flush()
 langfuse = Langfuse()
 
@@ -38,7 +38,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 2. SETUP SESSION ID ---
+# SETUP SESSION ID 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
@@ -68,13 +68,13 @@ def set_background(image_file):
     """
     st.markdown(style, unsafe_allow_html=True)
 
-# --- CSS FOR "FLOATING CARD" UI ---
+# CSS FOR "FLOATING CARD" UI 
 st.markdown(
     """
     <style>
-    /* Target the main container */
+    /* Target the main container - Force Dark Glassmorphism */
     .block-container {
-        background-color: rgba(0, 0, 0, 0.75);
+        background-color: rgba(15, 15, 15, 0.85); /* Darker background for contrast */
         border-radius: 25px;
         padding: 40px !important;
         max-width: 85% !important;
@@ -82,23 +82,81 @@ st.markdown(
         margin-bottom: 50px;
         margin-left: auto;
         margin-right: auto;
-        backdrop-filter: blur(8px);            
+        backdrop-filter: blur(10px);            
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    h1, h2, h3, h4, h5, h6, p, li, span, div, label {
-        color: white !important;
+
+    /* Force text inside the main container to be white */
+    .block-container h1, 
+    .block-container h2, 
+    .block-container h3, 
+    .block-container h4, 
+    .block-container h5, 
+    .block-container h6, 
+    .block-container p, 
+    .block-container li, 
+    .block-container span, 
+    .block-container label,
+    .block-container div {
+        color: #ffffff !important;
     }
+
+    /* --- SIDEBAR STYLING --- */
+    /* Force sidebar background to be almost black */
+    section[data-testid="stSidebar"] {
+        background-color: #111111 !important; /* Almost black */
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Force Sidebar Text to be White */
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] li,
+    section[data-testid="stSidebar"] div {
+        color: #ffffff !important;
+    }
+    
+    /* Fix Sidebar file uploader text */
+    section[data-testid="stSidebar"] .stFileUploader label {
+        color: #ffffff !important;
+    }
+
+    /* Fix Input Fields - Force Dark Background with White Text */
+    /* This ensures readability regardless of the user's theme setting */
     .stTextInput > div > div > input, 
     .stTextArea > div > div > textarea, 
     .stNumberInput > div > div > input {
-        color: white;
-        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff !important;           /* White Text */
+        background-color: #333333 !important; /* Dark Grey Background */
+        border: 1px solid #555555;
+    }
+    
+    /* Fix Selectbox/Dropdowns */
+    div[data-baseweb="select"] > div {
+        background-color: #333333 !important;
+        color: white !important;
+    }
+    
+    /* Fix Buttons */
+    .stButton > button {
+        border: 1px solid white;
+        color: white !important;
+        background-color: transparent;
+    }
+    .stButton > button:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: white;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 current_folder = os.path.dirname(__file__)
 image_path = os.path.join(current_folder, "background.jpg")
@@ -122,7 +180,7 @@ try:
 except Exception:
     st.title("🚗 CarSearch AI")
 
-# --- 3. TRACED FUNCTIONS ---
+# TRACED FUNCTIONS
 # We wrap the logic in functions decorated with @observe()
 
 @observe(name="fuel_cost_analysis")
@@ -152,7 +210,7 @@ def run_offer_analysis(service, description, price, mileage, year, recent_result
         recent_results=recent_results
     )
 
-# --- UI LOGIC ---
+# UI LOGIC 
 
 def fuel_cost_page():
     st.title("⛽ Fuel & Cost Analyzer")
@@ -178,18 +236,27 @@ def fuel_cost_page():
         # --- 3. FLUSH ---
         langfuse.flush()
 
-# --- SIDEBAR
+# SIDEBAR
 with st.sidebar:
     st.header("How to use the app")
     st.markdown("""
-    **1. 🔍 Search Cars:**
-    Enter your criteria (e.g., *"Diesel BMW 320d under 20k"*). The AI will find live listings on Standvirtual and rank them for you.
+    🔍 Search Cars:
+    Describe the car you want in natural language, including things like brand, model, fuel type, minimum year, maximum mileage, and price range.
+    The app opens Standvirtual in the background, pulls live listings that match, and ranks the best deals for you with an AI summary.​
 
-    **2. 2 Chat:**
-    After searching, switch to the Chat tab to ask questions about the results and your uploaded document.
+    💬 Chat About Results:
+    Go to “Chat About Cars” after a search to ask follow‑up questions like “Which car is the best value?” or “Which one is cheapest to run?”.​
+    The assistant answers using your search results.
 
-    **3. 🤝 Negotiation:**
-    Found a specific car? Paste its description in the Negotiation tab to get a price analysis and a message to send to the seller.
+    ⛽ Check Fuel Costs:
+    In the “Fuel Cost Analyzer” tab, enter your monthly km, consumption, and fuel price to see estimated monthly costs and AI tips.​
+
+    🤝 Negotiate an Offer:
+    Open “Offer Negotiation Helper” and paste the full description of a specific listing plus its price, km, and year.​
+    The app analyzes price fairness based on your recent search, flags scam risk, suggests a discount, and generates a negotiation message in Portuguese to send to the seller.​
+
+    📄 Inspect Documents: 
+    Use “Document Inspector” to upload car‑related PDFs and then combine them with search and chat to make a more informed decision.​
     """)
 
 # Tabs
@@ -201,13 +268,13 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📄 Document Inspector"  
 ])
 
-# --- TAB 3: FUEL COST ANALYZER ---
+# FUEL COST ANALYZER 
 with tab3:
     fuel_cost_page()
 
-# --- TAB 1: SEARCH ---
+# SEARCH
 with tab1:
-    st.header("Search for Cars")
+    st.header("🔍Search for Cars")
     user_query = st.text_area(
         "Enter your requirement",
         placeholder="Example: 'Diesel BMW Series 3 from 2018, max 80k km, price between 20.000€ and 30.000€'",
@@ -219,7 +286,7 @@ with tab1:
         if not user_query.strip():
             st.warning("Please enter a query.")
         else:
-            with st.spinner("Searching Market... (Check the opened browser window!)"):
+            with st.spinner("Searching Market for the best cars!"):
                 if st.session_state.car_service is None:
                     try:
                         st.session_state.car_service = CarSearchService()
@@ -289,16 +356,16 @@ with tab1:
             st.divider()
             st.info(f"**📊 Market Overview:**\n\n{st.session_state.search_summary}")
 
-# --- TAB 2: CHAT ---
+# TAB 2: CHAT 
 with tab2:
-    st.header("Chat About Results")
+    st.header("💬Chat About Results")
     if not st.session_state.current_results:
         st.info("Please perform a search in the 'Search Cars' tab first.")
     else:
         if st.session_state.pdf_context:
-            st.caption("✅ Answering using search results + uploaded document context")
+            st.caption("Answering using search results + uploaded document context")
         else:
-            st.caption("ℹ️ Answering using search results only")
+            st.caption("Answering using search results only")
 
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
@@ -331,7 +398,7 @@ with tab2:
             st.session_state.chat_history = []
             st.rerun()
 
-# --- TAB 4: Offer Negotiation Helper ---
+# Offer Negotiation Helper
 with tab4:
     # ensure service exists
     if "offer_service" not in st.session_state:
@@ -346,7 +413,7 @@ with tab4:
         "- Write a message to negotiate in Portuguese\n"
     )
 
-    # ---- User Inputs ----
+    # User Inputs 
     col1, col2 = st.columns(2)
     with col1:
         price = st.number_input(
@@ -366,7 +433,7 @@ with tab4:
         placeholder="Example: Honda Civic 1.4i S, 2001, 107,000 km..."
     )
 
-    # ---- RUN ANALYSIS ----
+    # RUN ANALYSIS
     if st.button("Analyze Offer", type="primary"):
         if not car_description.strip():
             st.warning("Please paste the listing description.")
@@ -382,7 +449,7 @@ with tab4:
                 year,
                 st.session_state.get("current_results", [])
             )
-            # --- 3. FLUSH ---
+            # FLUSH
             langfuse.flush()
 
         st.subheader("📊 Negotiation Analysis")
@@ -404,7 +471,7 @@ with tab4:
             color = "#e74c3c"  # red
             label = "High Scam Risk"
 
-        # --- DISPLAY RESULTS ---
+        # DISPLAY RESULTS
         st.markdown(
             f"""
             <div style='padding: 12px; border-radius: 8px; background-color:{color}; color:white;'>
@@ -441,4 +508,4 @@ with tab5:
 
 # Footer
 st.divider()
-st.caption("Built with ❤️ using Streamlit | CarSearch AI")
+# st.caption("Built with ❤️ using Streamlit | CarSearch AI")
