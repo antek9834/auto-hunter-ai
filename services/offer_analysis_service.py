@@ -1,8 +1,9 @@
 import os
 import json
+
 from utils.ai import call_gemini
 
-# Safe Import for Langfuse
+#Import for Langfuse 
 try:
     from langfuse.decorators import observe
 except ImportError:
@@ -12,81 +13,67 @@ except ImportError:
 
 class OfferAnalysisService:
     """
-    Evaluates a car offer using LLM:
-    - Price fairness
-    - Discount recommendation
-    - Scam risk
-    - Negotiation message
+    Service Layer responsible for evaluating car offers using Gemini.
+    Implements structured data extraction and separation of concerns.
     """
 
     def __init__(self):
-        self.model = "gemini-2.5-flash-preview-09-2025"
+        # Loading prompt template from external text file - to separate logic from content/according to Week 2 classes
+        prompt_path = os.path.join("prompts", "offer_analysis_prompt.txt")
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                self.prompt_template = f.read()
+        except FileNotFoundError:
+            # Fallback for safety reasones
+            print(f"Warning: Prompt file not found at {prompt_path}")
+            self.prompt_template = ""
 
     @observe(as_type="generation")
     def analyze(self, description, price, mileage, year, recent_results=None):
         """
-        Uses Gemini to analyze a car offer.
+        Orchestrates the analysis flow:
+        1. Data preparation & Context injection
+        2. Prompt formatting
+        3. LLM Inference
+        4. JSON Parsing & Validation
         """
 
-        # Prepare recent market data (optional)
+        # 1. Context Preparation
+        # We limit context to save tokens and focus on recent market trends
         market_sample = []
         if recent_results:
-            for car in recent_results[:8]:
-                market_sample.append({
-                    "title": car.get("title"),
-                    "price": car.get("price"),
-                    "year": car.get("year"),
-                    "km": car.get("km")
-                })
+            for car in recent_results[:5]:
+                market_sample.append(f"{car.get('title')} | {car.get('price')} EUR | {car.get('year')}")
+        
+        market_context_str = json.dumps(market_sample) if market_sample else "No market data available."
 
-        prompt = f"""
-You are a professional used-car market analyst.
+        # 2. Prompt Formatting
+        # Injecting variables into the loaded text template
+        prompt = self.prompt_template.format(
+            description=description,
+            price=price,
+            mileage=mileage,
+            year=year,
+            market_context=market_context_str
+        )
 
-Your task: Evaluate the offer and return a JSON object with:
-- price_position (string)
-- suggested_discount_eur (integer)
-- justification (string)
-- scam_risk_score (0–100)
-- scam_reasons (array of strings)
-- buyer_message (text in Portuguese)
+        # 3. LLM Call
+        # Using the shared utility for API communication
+        response_text = call_gemini(prompt)
 
-CAR OFFER:
-Description: {description}
-Price: {price} €
-Mileage: {mileage} km
-Year: {year}
-
-RECENT MARKET RESULTS (from user search):
-{json.dumps(market_sample, indent=2)}
-
-Now output JSON ONLY in this format:
-
-{{
-  "price_position": "...",
-  "suggested_discount_eur": 0,
-  "justification": "...",
-  "scam_risk_score": 0,
-  "scam_reasons": ["..."],
-  "buyer_message": "..."
-}}
-"""
-
-        # Call Gemini using existing helper
-        llm_response = call_gemini(prompt)
-
-        # LLM sometimes prints explanation before JSON → extract JSON safely
+        # 4. JSON Parsing & Validation (Wform week 3)
+        # Robust parsing strategy to handle potential Markdown formatting in LLM response
         try:
-            start = llm_response.index("{")
-            end = llm_response.rindex("}") + 1
-            json_text = llm_response[start:end]
-            data = json.loads(json_text)
-            return data
-        except Exception:
+            cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+            return json.loads(cleaned_text)
+        except json.JSONDecodeError:
+            # Fallback in case of parsing failure
+            print(f"JSON Parsing Error. Raw response: {response_text}")
             return {
-                "price_position": "Unable to determine.",
+                "price_position": "Unknown",
                 "suggested_discount_eur": 0,
-                "justification": f"AI returned invalid format: {llm_response[:100]}...",
-                "scam_risk_score": 50,
-                "scam_reasons": ["Could not parse AI output."],
-                "buyer_message": "Desculpa — não consegui analisar a oferta."
+                "justification": "Automated analysis failed due to output format error.",
+                "scam_risk_score": 0,
+                "scam_reasons": [],
+                "buyer_message": "Olá, vi o anúncio e tenho interesse. O preço é negociável?"
             }

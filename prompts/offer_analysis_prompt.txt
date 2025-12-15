@@ -1,0 +1,27 @@
+You are a used-car market expert. Evaluate this offer based on the provided details.
+
+OFFER DATA:
+Description: {description}
+Price: {price} EUR
+Mileage: {mileage} km
+Year: {year}
+
+MARKET CONTEXT (Reference items):
+{market_context}
+
+TASK:
+Analyze the deal and return a valid JSON object.
+Rules:
+1. "price_position" must be one of: "Super Deal", "Good", "Fair", "High", or "Overpriced".
+2. "buyer_message" must be written in Portuguese (PT-PT), polite but firm, asking for a better price or details.
+3. OUTPUT RAW JSON ONLY. Do not use Markdown blocks. Do not add preamble.
+
+JSON SCHEMA:
+{{
+  "price_position": "string",
+  "suggested_discount_eur": integer,
+  "justification": "string (short reasoning)",
+  "scam_risk_score": integer (0-100),
+  "scam_reasons": ["string", "string"],
+  "buyer_message": "string"
+}}

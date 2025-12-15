@@ -268,11 +268,11 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📄 Document Inspector"  
 ])
 
-# FUEL COST ANALYZER 
+# TAB 3 - FUEL COST ANALYZER 
 with tab3:
     fuel_cost_page()
 
-# SEARCH
+# TAB 1 - SEARCH
 with tab1:
     st.header("🔍Search for Cars")
     user_query = st.text_area(
@@ -356,7 +356,7 @@ with tab1:
             st.divider()
             st.info(f"**📊 Market Overview:**\n\n{st.session_state.search_summary}")
 
-# TAB 2: CHAT 
+# TAB 2 - CHAT 
 with tab2:
     st.header("💬Chat About Results")
     if not st.session_state.current_results:
@@ -390,7 +390,7 @@ with tab2:
                 )
             st.session_state.chat_history.append({'role': 'assistant', 'content': ans})
             
-            # --- 3. FLUSH ---
+
             langfuse.flush()
             st.rerun()
 
@@ -398,9 +398,9 @@ with tab2:
             st.session_state.chat_history = []
             st.rerun()
 
-# Offer Negotiation Helper
+# TAB 4 - OFFER NEGOTIATION HELPER
 with tab4:
-    # ensure service exists
+
     if "offer_service" not in st.session_state:
         st.session_state.offer_service = OfferAnalysisService()
 
@@ -449,17 +449,17 @@ with tab4:
                 year,
                 st.session_state.get("current_results", [])
             )
-            # FLUSH
+            
             langfuse.flush()
 
         st.subheader("📊 Negotiation Analysis")
         
-        # Safety check – prevents undefined variable errors
+        # Safety check
         if not analysis:
             st.error("AI returned no analysis. Please try again.")
             st.stop()
 
-        # Scam color logic
+        # SCAM RISK VISUALIZATION
         risk = analysis.get("scam_risk_score", 50)
         if risk < 30:
             color = "#2ecc71"  # green
@@ -508,4 +508,4 @@ with tab5:
 
 # Footer
 st.divider()
-# st.caption("Built with ❤️ using Streamlit | CarSearch AI")
+# st.caption("Built with ❤️ using Streamlit | AutoHunter AI")
