@@ -43,8 +43,8 @@ The Service Layer acts as the central orchestrator:
 * **Output Strategy:** Uses strict **JSON schema enforcement** and Pydantic validation to ensure the LLM returns reliable, parsable data for backend processing.
 
 ### 4.4 Data Storage
-* [cite_start]**Approach:** **Database-less design**[cite: 22, 123].
-* [cite_start]**Justification:** Real-time scraping of Standvirtual.pt guarantees up-to-date listing information, which is more valuable than stale historical data in a fluctuating market[cite: 123, 124].
+* **Approach:** **Database-less design**.
+* **Justification:** Real-time scraping of Standvirtual.pt guarantees up-to-date listing information, which is more valuable than stale historical data in a fluctuating market.
 
 ## 5. Request–Response Flow
 The typical flow for a car search is as follows:
