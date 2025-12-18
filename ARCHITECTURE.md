@@ -5,12 +5,12 @@ This document provides a detailed overview of the architectural design, componen
 ---
 
 ## 1. Introduction
-Auto Hunter AI is a web-based decision-support prototype designed to mitigate information asymmetry in the European used-car market. It empowers budget-conscious and first-time buyers by providing AI-driven search, real-time market analysis, and negotiation support[cite: 18, 33]. 
+Auto Hunter AI is a web-based decision-support prototype designed to mitigate information asymmetry in the European used-car market. It empowers budget-conscious and first-time buyers by providing AI-driven search, real-time market analysis, and negotiation support. 
 
-**Scope:** This system is developed as a Capstone Project for a Bachelor’s Degree in Data Science, focusing on modularity and AI integration rather than a full-scale commercial platform[cite: 4, 5, 177].
+**Scope:** This system is developed as a Capstone Project for a Bachelor’s Degree in Data Science, focusing on modularity and AI integration rather than a full-scale commercial platform.
 
 ## 2. Architectural Style
-The system follows a **client-server architecture** with a **layered backend design**. This approach ensures a clean separation between user interaction, business logic, and external AI services, allowing for better maintainability and the ability to swap models or data sources with minimal friction[cite: 44, 216].
+The system follows a **client-server architecture** with a **layered backend design**. This approach ensures a clean separation between user interaction, business logic, and external AI services, allowing for better maintainability and the ability to swap models or data sources with minimal friction.
 
 ## 3. High-Level System Overview
 The application is structured into four primary layers that interact with external dependencies:
@@ -31,10 +31,11 @@ The application is structured into four primary layers that interact with extern
     * Rendering color-coded visual warnings for scam risks and formatted negotiation messages.
 
 ### 4.2 Backend (Service Layer)
-The Service Layer acts as the central orchestrator[cite: 57]:
+The Service Layer acts as the central orchestrator:
 * **`CarSearchService`:** Translates free-text queries into filters, triggers scraping, and ranks results.
 * **`OfferAnalysisService`:** Evaluates price fairness and detects scam risks in listing descriptions.
 * **`FuelCostAnalysisService`:** Computes estimated ownership costs based on usage patterns.
+* **`DocumentAnalyzerservice`:** Processes uploaded files and analyzes the car offer accordingly.
 
 ### 4.3 LLM Integration Layer (AI Layer)
 * **Model:** **Google Gemini 2.5 Flash**.
