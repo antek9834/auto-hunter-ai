@@ -1,11 +1,11 @@
-🚗 Auto Hunter: AI-Powered Car Search & Analysis Agent
+## 🚗 Auto Hunter: AI-Powered Car Search & Analysis Agent
 
-Academic Capstone Project | AI Systems Engineering | 2025/2026
+## Academic Capstone Project | AI Systems Engineering | 2025/2026
 
 Important Note on Observability:
 This project currently has a specific dependency constraint with Langfuse. To ensure tracing functionality operates correctly, you must use Langfuse version 2.6.0 (pip install langfuse==2.60.0). Newer versions may introduce compatibility issues with the current implementation.
 
-Overview
+## Overview
 
 Auto Hunter is an intelligent automotive assistant designed to simplify the used car buying process. It combines real-time data scraping, Large Language Model (LLM) reasoning, and Retrieval-Augmented Generation (RAG) to provide a unified platform for searching, analyzing, and negotiating vehicle purchases in the Portuguese market.
 
@@ -21,7 +21,7 @@ Ingest external documents (e.g., VIN reports, insurance policies) to provide con
 
 Evaluate individual offers for price fairness and scam indicators.
 
-Features
+## Features
 
 Intelligent Search & Ranking: Parses natural language queries (e.g., "Diesel BMW under 20k") into structured filters, scrapes live data from Standvirtual, and re-ranks listings with AI-generated "Reasons to Buy."
 
@@ -33,7 +33,7 @@ Fuel & Cost Analyzer: Calculates estimated monthly ownership costs based on user
 
 Document Inspector: A dedicated tool to audit vehicle documents like VIN reports or IPO sheets, providing an AI verdict on potential red flags.
 
-Tech Stack
+## Tech Stack
 
 Backend:
 
@@ -55,7 +55,7 @@ Langfuse for observability (latency, token usage tracking)
 
 PyPDF for document processing
 
-Architecture
+## Architecture
 
 The Auto Hunter system follows a modular, service-oriented architecture:
 
@@ -75,7 +75,7 @@ FuelCostService: Logic for fuel consumption calculations.
 
 DocumentAnalyzerService: Logic for auditing uploaded PDFs against vehicle data.
 
-Installation & Setup
+## Installation & Setup
 
 Prerequisites
 
@@ -134,7 +134,7 @@ Run the application:
 streamlit run app.py
 
 
-Usage
+## Usage
 
 🔍 Step 1: Search Cars
 
@@ -180,7 +180,7 @@ Upload your PDF document to the analyzer.
 
 The AI will review the document content, identifying potential red flags or important details to help you make an informed decision.
 
-Project Structure
+## Project Structure
 
 carsearch_ai/
 ├── app.py                         # Main entry point (Streamlit UI)
@@ -208,8 +208,6 @@ carsearch_ai/
     └── negotiation_ui.py          # UI for Negotiation tab
 
 
-Team
-
 ## Team
 
 - Antek - Architect, QA & Testing
@@ -217,6 +215,6 @@ Team
 - Katarina - AI Engineer
 - Nina - Frontend Developer
 
-License
+## License
 
 Educational Use Only.
