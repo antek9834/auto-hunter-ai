@@ -255,8 +255,8 @@ with st.sidebar:
     Open “Offer Negotiation Helper” and paste the full description of a specific listing plus its price, km, and year.​
     The app analyzes price fairness based on your recent search, flags scam risk, suggests a discount, and generates a negotiation message in Portuguese to send to the seller.​
 
-    📄 Inspect Documents: 
-    Use “Document Inspector” to upload car‑related PDFs and then combine them with search and chat to make a more informed decision.​
+    📄 Inspect Documents: ​
+    Use “Document Inspector” to upload car-related documents (VIN document,  Inspection Sheet (IPO), etc.) to get detailed insights and make more informed decisions.
     """)
 
 # Tabs
