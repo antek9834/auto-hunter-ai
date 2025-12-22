@@ -1,5 +1,5 @@
 streamlit
-langfuse>=2.50.0
+langfuse==2.53.9
 google-genai
 google-generativeai
 openai
