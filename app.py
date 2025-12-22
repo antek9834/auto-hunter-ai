@@ -417,11 +417,11 @@ with tab4:
     col1, col2 = st.columns(2)
     with col1:
         price = st.number_input(
-            "Price (€)", min_value=0.0, max_value=100000.0, step=100.0
+            "Price (€)", min_value=0.0, max_value=10000000.0, step=100.0
         )
     with col2:
         mileage = st.slider(
-            "Mileage (km)", min_value=0, max_value=1_000_000, step=1000, value=150000
+            "Mileage (km)", min_value=0, max_value=1_000_000_000, step=1000, value=150000
         )
         year = st.slider(
             "Production Year", min_value=1900, max_value=2025, value=2015
