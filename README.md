@@ -47,7 +47,7 @@ Streamlit
 
 Data Retrieval:
 
-Selenium WebDriver (Chrome) for scraping Standvirtual
+Selenium WebDriver for scraping Standvirtual
 
 AI/ML:
 
