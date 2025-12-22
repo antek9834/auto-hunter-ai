@@ -53,8 +53,6 @@ AI/ML:
 
 Langfuse for observability (latency, token usage tracking)
 
-PyPDF for document processing
-
 ## Architecture
 
 The Auto Hunter system follows a modular, service-oriented architecture:
