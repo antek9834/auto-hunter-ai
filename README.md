@@ -107,8 +107,8 @@ Installation Steps
 
 Clone the repository:
 
-git clone <repo-url> carsearch_ai
-cd carsearch_ai
+git clone <repo-url> auto-hunter-ai
+cd auto-hunter-ai
 
 
 Install dependencies:
