@@ -1,0 +1,14 @@
+streamlit
+langfuse
+google-genai
+google-generativeai
+openai
+pydantic
+httpx
+selenium
+webdriver-manager
+python-dotenv
+beautifulsoup4
+pandas
+PyPDF2
+backoff
