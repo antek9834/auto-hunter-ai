@@ -1,242 +1,141 @@
-🚗 CarSearch AI
+Auto Hunter: AI-Powered Car Search & Analysis Agent
 
-AI-powered automotive assistant combining intelligent scraping, market analysis, negotiation support and scam-risk detection.
+Academic Capstone Project | 2025/2026
 
-Note: This project was developed for educational purposes.
-It demonstrates AI integration, architecture design and Streamlit UI — not a production-grade system.
+Important Note on Observability:
+This project currently has a specific dependency constraint with Langfuse. To ensure tracing functionality operates correctly, you must use Langfuse version 2.6.0 (pip install langfuse==2.60.0). Newer versions may introduce compatibility issues with the current implementation.
 
-✨ What This Application Does
+Auto Hunter is an intelligent automotive assistant designed to simplify the used car buying process. It combines real-time data scraping, Large Language Model (LLM) reasoning, and Retrieval-Augmented Generation (RAG) to provide a unified platform for searching, analyzing, and negotiating vehicle purchases in the Portuguese market.
 
-CarSearch AI allows users to:
+Summary:
 
-🔍 Search car listings & parse structured data
+Buying a used car involves navigating fragmented data, assessing fair market value, and detecting potential fraud. Auto Hunter addresses these challenges by acting as a personalized agent that can:
 
-🤖 Rank vehicles using AI reasoning
+Parse natural language intents into structured search queries.
 
-🧠 Chat about search results with contextual awareness
+Scrape live market data from Standvirtual using a headless browser.
 
-💸 Evaluate price fairness
+Synthesize findings into ranked recommendations with AI-generated justifications.
 
-🚨 Detect scam risk from listing description
+Ingest external documents (e.g., VIN reports, insurance policies) to provide context-aware advice.
 
-🤝 Generate negotiation messages (PT)
+Evaluate individual offers for price fairness and scam indicators.
 
-⛽ Calculate fuel costs + AI explanation
+Key Features:
 
-📄 Read PDF guides/VIN reports for contextual analysis
+1. Intelligent Search & Ranking
 
-🧩 Concepts Demonstrated
-Area	Concept	Location
-Environment	Setup, config	.env, pyproject.toml
-AI	REST Gemini API wrapper	utils/ai.py
-Prompt Engineering	Templates & formatting	prompts/*.txt
-Business Logic	Modular services	services/*.py
-Scraping	Standvirtual car extraction	car_search_system.py
-ML Reasoning	AI ranking, analysis	offer_analysis_service.py
-UI	Streamlit frontend	app.py
-Architecture	Clean layering	services → utils → components
-📁 Project Structure
-carsearch_ai/
-├── app.py                           # Streamlit UI (main entry point)
-├── .env.example                     # Template for environment variables
-├── pyproject.toml                   # Dependencies and project configuration
-│
-├── services/                        # Business logic layer
-│   ├── car_search_system.py         # Scraping, ranking, summarisation
-│   ├── fuel_cost_service.py         # Fuel cost computations
-│   ├── offer_analysis_service.py    # Scam risk, pricing, negotiation logic
-│
-├── utils/                           # Shared utilities
-│   ├── ai.py                        # Central Gemini API wrapper
-│   ├── prompts.py                   # Prompt loader
-│   └── tracing.py                   # Optional tracing
-│
-├── components/
-│   └── negotiation_ui.py            # UI components for negotiation results
-│
-└── prompts/
-    ├── search_prompt.txt
-    ├── market_summary.txt
-    └── negotiation_prompt.txt
+Natural Language Processing: Users input queries like "Diesel BMW 3 Series under 20k with less than 100k km."
 
-⚙️ Setup Instructions
-1. Clone the repository
+Structured Parsing: The system extracts key filters (Brand, Model, Fuel, Year, Price, KM) using Gemini.
+
+Live Scraping: A custom Selenium scraper retrieves real-time listings from Standvirtual.
+
+AI Re-Ranking: Results are sent back to the LLM to be ranked by relevance and annotated with a specific "Reason to Buy."
+
+2. Chat About Cars
+
+Interactive Chat: Users can chat directly with the AI about the scraped car listings, asking for comparisons, value assessments, or specific details about the vehicles found.
+
+Contextual History: The chat retains context of the search results to answer follow-up questions intelligently.
+
+3. Offer Negotiation Helper
+
+Scam Detection: Analyzes listing descriptions for red flags (e.g., urgency, weird payment methods) and assigns a risk score.
+
+Price Valuation: Compares the offer price against recent market data.
+
+Message Generation: Drafts a culturally appropriate negotiation message in Portuguese to send to the seller.
+
+4. Fuel & Cost Analyzer
+
+Calculates monthly ownership costs based on user inputs (mileage, fuel price).
+
+Provides AI-generated tips for reducing consumption based on specific driving habits.
+
+5. Inspect Documents
+
+Document Inspector: Use the "Document Inspector" feature to upload car‑related PDFs (like VIN reports or insurance policies).
+
+Integrated Analysis: Combine the extracted document data with search results and chat to make a more informed decision.
+
+Usage Guide:
+
+This application is designed to be intuitive. Follow these steps to get the most out of it:
+
+🔍 Step 1: Search Cars
+
+Navigate to the Search Cars tab. Describe the car you want in natural language in the text box.
+
+Example: "I want a Fiat 500, petrol, after 2018, under 15000 euros."
+
+Click Search. The app will open a browser in the background, fetch live listings from Standvirtual, and present them ranked by how well they match your needs.
+
+💬 Step 2: Chat About Results
+
+Once you have search results, switch to the Chat About Cars tab.
+
+Ask follow‑up questions like: “Which of these cars is the best value?” or “Which one has the lowest mileage?”.
+
+The AI assistant will analyze the specific listings found in Step 1 to give you a personalized answer.
+
+⛽ Step 3: Check Fuel Costs
+
+Go to the Fuel & Cost Analyzer tab to estimate ownership costs.
+
+Enter your expected monthly mileage, the car's average consumption, and current fuel price.
+
+The AI will calculate your estimated monthly fuel bill and provide tips on how to save money.
+
+🤝 Step 4: Negotiate an Offer
+
+Found a specific listing you like? Go to the Offer Negotiation Helper tab.
+
+Paste the full description of the listing along with its price, mileage, and year.
+
+Click Analyze Offer.
+
+The AI will evaluate if the price is fair, detect potential scam risks (Red/Yellow/Green indicators), suggest a discount amount, and even write a negotiation message in Portuguese for you to send.
+
+📄 Step 5: Inspect Documents
+
+Deep Audit: Analyzes uploaded PDFs (like VIN reports or maintenance logs) specifically against the car's price and mileage.
+
+Red Flag Detection: Automatically flags inconsistencies or risks found in the document text.
+
+Verdict: Provides a structured "Go/No-Go" recommendation based on the document evidence.
+
+Prerequisites:
+
+Python 3.10+ with necessary packages
+
+API Keys: Google Gemini, Langfuse (optional for tracing)
+
+Installation Steps:
+
+Clone the Repository
+
 git clone <repo-url>
 cd carsearch_ai
 
-2. Install dependencies
 
-Using uv (recommended):
+Install Dependencies:
 
-uv sync
+Install all necessary Python packages for the project (such as streamlit, selenium, google-generativeai etc.).
 
+Note: Ensure you explicitly install Langfuse version 2.6.0 (pip install langfuse==2.60.0) to avoid compatibility issues.
 
-Or using pip:
+Environment Configuration
+Create a .env file in the root directory:
 
-pip install -r requirements.txt
-
-3. Configure environment variables
-
-Copy template:
-
-cp .env.example .env
+GOOGLE_API_KEY="your_gemini_api_key"
+LANGFUSE_SECRET_KEY="sk-lf-..."
+LANGFUSE_PUBLIC_KEY="pk-lf-..."
+LANGFUSE_HOST="[https://cloud.langfuse.com](https://cloud.langfuse.com)"
 
 
-Add your API key:
+Get a Gemini API key here: https://aistudio.google.com/apikey
 
-GOOGLE_API_KEY=your_key_here
-
-
-Get one here → https://aistudio.google.com/apikey
-
-4. Run the app
-
-Using uv:
-
-uv run streamlit run app.py
-
-
-Or:
+Run the Application:
 
 streamlit run app.py
-
-
-The app launches at:
-👉 http://localhost:8501
-
-🧑‍💻 How to Use
-🔍 Search Cars
-
-Enter natural-language criteria
-
-System scrapes listings
-
-AI ranks them
-
-Summary overview is provided
-
-💬 Chat About Cars
-
-Ask questions like:
-
-"Which one is best value?"
-
-"Is the mileage suspicious?"
-
-"Compare the top 3."
-
-AI answers using your current search + PDF context.
-
-🤝 Negotiation Helper
-
-Paste offer details → system returns:
-
-Scam risk (green / yellow / red)
-
-Price position
-
-Discount suggestion
-
-Full justification
-
-Portuguese negotiation message
-
-⛽ Fuel & Cost Analyzer
-
-Input:
-
-km/month
-
-fuel consumption
-
-fuel price
-
-AI explains cost patterns and gives recommendations.
-
-🔧 Architecture Details
-UI Layer — app.py
-
-Manages Streamlit pages
-
-No business logic
-
-Calls services only
-
-Service Layer
-
-Located in services/:
-
-File	Responsibility
-car_search_system.py	Scraping, ranking, summarising
-offer_analysis_service.py	Scam detection, pricing logic
-fuel_cost_service.py	Fuel cost computation
-AI Layer — utils/ai.py
-
-Contains central Gemini REST API wrapper
-
-Allows changing model in one place
-
-Handles errors & rate limits
-
-Prompt Layer — prompts/*.txt
-
-Editable without touching code
-
-Clean separation
-
-⚠️ Handling AI Quota Errors
-
-During testing we encountered this error:
-
-Gemini API error (429):
-"You exceeded your current quota...
-Quota exceeded for metric: generate_content_free_tier_requests
-retryDelay: 54s"
-
-
-To mitigate such issues, the app is structured so that:
-
-All AI calls go through one wrapper → easy model swap
-
-Fallback models can be introduced
-
-Caching can reduce repeated calls
-
-Centralized error handling prevents UI crashes
-
-🚀 Future Improvements
-
-Support for OLX, Autoscout24, mobile.de
-
-Image recognition for car model detection
-
-VIN API integrations (CarVertical, AutoDNA)
-
-User logins & saved searches
-
-Alerts for new listings
-
-🛠️ Common Issues
-"GOOGLE_API_KEY not found"
-
-→ Ensure .env exists and contains your key.
-
-Scraping returns empty data
-
-→ Standvirtual may rate-limit; retry later.
-
-429 quota exceeded
-
-→ Free Gemini tier exhausted; wait or change model in ai.py.
-
-📚 Learn More
-
-Google Gemini → https://ai.google.dev
-
-Streamlit → https://docs.streamlit.io
-
-uv package manager → https://docs.astral.sh/uv
-
-📄 License
-
-Educational use — AI Systems Engineering Project (2024/2025)
