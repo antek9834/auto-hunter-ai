@@ -21,6 +21,8 @@ Ingest external documents (e.g., VIN reports, insurance policies) to provide con
 
 Evaluate individual offers for price fairness and scam indicators.
 
+Deployed app can be accessed on: https://auto-hunter-ai-12.streamlit.app/?brid=2DgJGdR9FkOcI4GZrAx22g
+
 ## Features
 
 Intelligent Search & Ranking: Parses natural language queries (e.g., "Diesel BMW under 20k") into structured filters, scrapes live data from Standvirtual, and re-ranks listings with AI-generated "Reasons to Buy."
@@ -180,7 +182,8 @@ The AI will review the document content, identifying potential red flags or impo
 
 ## Project Structure
 
-carsearch_ai/
+<pre>
+auto-hunter-ai/
 ├── app.py                         # Main entry point (Streamlit UI)
 ├── .env.example                   # Template for environment variables
 ├── services/                      # Business Logic Layer
@@ -205,7 +208,7 @@ carsearch_ai/
     ├── document_ui.py             # UI for Document Inspector tab
     └── negotiation_ui.py          # UI for Negotiation tab
 
-
+</pre>
 ## Team
 
 - Antek - Architect, QA & Testing
