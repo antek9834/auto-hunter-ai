@@ -15,6 +15,12 @@ Rules:
 1. "price_position" must be one of: "Super Deal", "Good", "Fair", "High", or "Overpriced".
 2. "buyer_message" must be written in Portuguese (PT-PT), polite but firm, asking for a better price or details.
 3. OUTPUT RAW JSON ONLY. Do not use Markdown blocks. Do not add preamble.
+IMPORTANT SCAM RULES:
+- If the description is empty or extremely short (less than ~20 words), scam_risk_score MUST be at least 40.
+- If the price is significantly below market AND the description lacks technical details, scam_risk_score MUST be at least 60.
+- Missing VIN, service history, seller type, or location increases scam risk.
+- scam_reasons must explicitly mention lack of description if applicable.
+
 
 JSON SCHEMA:
 {{
